@@ -112,6 +112,7 @@ class StrategicCampaignMap {
 
     this.selectedProvince = null;
     this.hoveredProvince = null;
+    this.activeLabelBoxes = [];
 
     // Historical Relief World Map Background (2400 x 1162 px)
     this.mapWidth = 2400;
@@ -244,10 +245,10 @@ class StrategicCampaignMap {
     return null;
   }
 
-  render(ctx, armies) {
+  render(ctx, armies, selectedArmy = null) {
     if (!ctx) return;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    const w = ctx.canvas ? ctx.canvas.width : (this.canvas ? this.canvas.width : 1600);
+    const h = ctx.canvas ? ctx.canvas.height : (this.canvas ? this.canvas.height : 900);
     this.animTime += 1;
 
     // Update smooth camera lerp if in transition
@@ -281,7 +282,9 @@ class StrategicCampaignMap {
     if (armies && Array.isArray(armies)) {
       armies.forEach(a => {
         if (a && typeof a.renderOnCampaign === 'function') {
-          a.renderOnCampaign(ctx);
+          const isSel = (selectedArmy === a);
+          const isHov = (this.hoveredArmy === a);
+          a.renderOnCampaign(ctx, isHov, isSel);
         }
       });
     }
@@ -459,6 +462,9 @@ class StrategicCampaignMap {
   _renderProvinces(ctx) {
     const factionsObj = (typeof FACTIONS !== 'undefined') ? FACTIONS : {};
 
+    // Reset frame-level label collision manager
+    this.activeLabelBoxes = [];
+
     // Trade good labels and icons
     const tradeLabels = {
       grain: { icon: '🌾', name: 'Grano', color: '#16a34a' },
@@ -471,6 +477,7 @@ class StrategicCampaignMap {
       gold: { icon: '🪙', name: 'Oro', color: '#eab308' }
     };
 
+    // 1. First Pass: Render All Province Polygons & Territorial Borders
     this.provinces.forEach(p => {
       const fac = factionsObj[p.owner] || factionsObj.spain || {
         name: 'Imperio',
@@ -483,7 +490,7 @@ class StrategicCampaignMap {
 
       ctx.save();
 
-      // 1. Draw Province Territorial Polygon
+      // Draw Province Territorial Polygon
       ctx.beginPath();
       if (p.polygon && p.polygon.length > 2) {
         p.polygon.forEach((pt, idx) => {
@@ -495,7 +502,7 @@ class StrategicCampaignMap {
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
       }
 
-      // 2. Compute fill color according to active Mapmode
+      // Compute fill color according to active Mapmode
       let fillColor = fac.colors.primary || '#d97706';
       let fillAlpha = isSelected ? 0.45 : (isHovered ? 0.35 : 0.22);
 
@@ -528,10 +535,9 @@ class StrategicCampaignMap {
       ctx.globalAlpha = fillAlpha;
       ctx.fill();
 
-      // 3. Multi-layered Baroque Territorial Border
+      // Territorial Border
       ctx.globalAlpha = 1.0;
       if (isSelected) {
-        // Pulsating golden selection halo
         const pulse = Math.sin(this.animTime * 0.12) * 0.8;
         ctx.strokeStyle = '#fbbf24';
         ctx.lineWidth = 3.2 + pulse;
@@ -541,49 +547,163 @@ class StrategicCampaignMap {
         ctx.lineWidth = 2.4;
         ctx.stroke();
       } else {
-        // Gilded fine boundary
         ctx.strokeStyle = fac.colors.primary || '#d97706';
         ctx.lineWidth = 1.4;
         ctx.stroke();
       }
 
-      // 4. Port Anchor (If province has port and visible at zoom)
-      if (p.hasPort && this.zoom >= 0.95) {
+      // Port Anchor (Visible only at medium-deep zoom)
+      if (p.hasPort && this.zoom >= 1.6) {
         const portX = p.x + p.radius * 0.52;
         const portY = p.y + p.radius * 0.42;
         ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 11px sans-serif';
+        ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('⚓', portX, portY);
       }
 
-      // 5. City Citadel & LOD Overlay
-      this._renderCitadel(ctx, p, fac, isSelected, tradeLabels);
-
       ctx.restore();
+    });
+
+    // 2. Second Pass: Age of History III Macro Unified Realm Titles (Zoom < 1.6)
+    if (this.zoom < 1.6) {
+      this._renderNationClusters(ctx, factionsObj);
+    }
+
+    // 3. Third Pass: Individual Cities & Citadels with LOD & Anti-Collision
+    this.provinces.forEach(p => {
+      const fac = factionsObj[p.owner] || factionsObj.spain || {
+        name: 'Imperio',
+        banner: '⚔️',
+        colors: { primary: '#d97706', accent: '#fbbf24' }
+      };
+      const isSelected = this.selectedProvince === p;
+      const isHovered = this.hoveredProvince === p;
+
+      this._renderCitadel(ctx, p, fac, isSelected, isHovered, tradeLabels);
     });
   }
 
-  _renderCitadel(ctx, p, fac, isSelected, tradeLabels) {
+  // Age of History III: Draw unified sovereign empire titles across contiguous province clusters
+  _renderNationClusters(ctx, factionsObj) {
+    const fObj = factionsObj || (typeof FACTIONS !== 'undefined' ? FACTIONS : (globalThis.FACTIONS || {}));
+    const nationProvinces = {};
+    this.provinces.forEach(p => {
+      if (!p.owner || p.owner === 'neutral') return;
+      if (!nationProvinces[p.owner]) nationProvinces[p.owner] = [];
+      nationProvinces[p.owner].push(p);
+    });
+
+    ctx.save();
+
+    for (const [ownerId, provs] of Object.entries(nationProvinces)) {
+      if (provs.length === 0) continue;
+      const fac = fObj[ownerId];
+      if (!fac) continue;
+
+      // Group into spatial clusters (enclaves separated by > 380px world units)
+      const clusters = [];
+      provs.forEach(p => {
+        let added = false;
+        for (const cl of clusters) {
+          const dist = Math.hypot(p.x - cl.cx, p.y - cl.cy);
+          if (dist < 380) {
+            cl.provs.push(p);
+            cl.cx = cl.provs.reduce((sum, item) => sum + item.x, 0) / cl.provs.length;
+            cl.cy = cl.provs.reduce((sum, item) => sum + item.y, 0) / cl.provs.length;
+            added = true;
+            break;
+          }
+        }
+        if (!added) {
+          clusters.push({ cx: p.x, cy: p.y, provs: [p] });
+        }
+      });
+
+      clusters.forEach(cl => {
+        // Only draw nation label for significant clusters
+        if (cl.provs.length < 2 && provs.length > 3) return;
+
+        const count = cl.provs.length;
+        const fontSize = Math.max(11, Math.min(18, 10 + Math.sqrt(count) * 2.8));
+        const realmName = fac.name.toUpperCase();
+
+        ctx.font = `bold ${fontSize}px "Cinzel", "Outfit", "Times New Roman", serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Wide letter-spaced title
+        const spacedName = realmName.split('').join(' ');
+        const textW = ctx.measureText(spacedName).width;
+
+        // Bounding collision box
+        const boxX = cl.cx - textW * 0.5 - 10;
+        const boxY = cl.cy - 12;
+        const boxW = textW + 20;
+        const boxH = 24;
+
+        if (!this._checkAndAddLabelBox(boxX, boxY, boxW, boxH, false)) return;
+
+        // Sovereign Banner Emblem above name
+        if (count >= 2) {
+          ctx.font = '14px sans-serif';
+          ctx.fillText(fac.banner || '👑', cl.cx, cl.cy - 14);
+        }
+
+        // Text Halo & Glow for high contrast readability
+        ctx.font = `bold ${fontSize}px "Cinzel", "Outfit", "Times New Roman", serif`;
+        ctx.strokeStyle = 'rgba(10, 15, 26, 0.92)';
+        ctx.lineWidth = 4.5;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(spacedName, cl.cx, cl.cy);
+
+        ctx.fillStyle = fac.colors.accent || '#fbbf24';
+        ctx.fillText(spacedName, cl.cx, cl.cy);
+      });
+    }
+
+    ctx.restore();
+  }
+
+  // Anti-collision AABB manager for labels
+  _checkAndAddLabelBox(x, y, w, h, force = false) {
+    if (!this.activeLabelBoxes) this.activeLabelBoxes = [];
+    if (force) {
+      this.activeLabelBoxes.push({ x, y, w, h });
+      return true;
+    }
+    for (const b of this.activeLabelBoxes) {
+      if (x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y) {
+        return false; // Collides with higher-priority label
+      }
+    }
+    this.activeLabelBoxes.push({ x, y, w, h });
+    return true;
+  }
+
+  _renderCitadel(ctx, p, fac, isSelected, isHovered, tradeLabels) {
     const cx = p.x;
     const cy = p.y;
-    const isFortress = p.hasBuilding('star_bastion') || p.cityLevel >= 3 || p.defenseLevel >= 3;
+    const isFortress = p.hasBuilding('star_bastion') || p.defenseLevel >= 2;
     const z = this.zoom;
+    const isCapital = fac.capitalProvince === p.id;
 
     ctx.save();
 
     // ==========================================
-    // LOD TIER 1: MACRO VIEW (Zoom < 1.05)
-    // Clean geopolitical view without clutter
+    // LOD TIER 1: MACRO VIEW (Zoom < 1.45)
+    // Clean geopolitical view (Age of History 3)
+    // Zero individual banners/pills to prevent clutter
     // ==========================================
-    if (z < 1.05) {
-      ctx.fillStyle = isSelected ? '#fbbf24' : (fac.colors.primary || '#d97706');
+    if (z < 1.45 && !isSelected && !isHovered) {
+      // Draw subtle city node dot
+      ctx.fillStyle = isCapital ? '#fbbf24' : (fac.colors.primary || '#d97706');
       ctx.beginPath();
-      ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+      ctx.arc(cx, cy, isCapital ? 4.5 : 3.0, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 0.8;
       ctx.stroke();
 
       ctx.restore();
@@ -591,18 +711,18 @@ class StrategicCampaignMap {
     }
 
     // ==========================================
-    // LOD TIER 2 & 3: CITADEL DRAWING (Zoom >= 1.05)
+    // LOD TIER 2 & 3: CITADEL DRAWING (Zoom >= 1.45 or Selected/Hovered)
     // ==========================================
     if (isFortress) {
       // Star Bastion (Trace Italienne) 8-pointed shape
       ctx.fillStyle = '#1e293b';
-      ctx.strokeStyle = isSelected ? '#fbbf24' : '#d97706';
-      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = isSelected ? '#fbbf24' : (fac.colors.primary || '#d97706');
+      ctx.lineWidth = 1.4;
 
       ctx.beginPath();
       const numPoints = 8;
-      const outerR = z > 2.2 ? 16 : 13;
-      const innerR = z > 2.2 ? 9 : 7;
+      const outerR = z > 2.6 ? 14 : 10;
+      const innerR = z > 2.6 ? 7 : 5;
       for (let i = 0; i < numPoints * 2; i++) {
         const r = (i % 2 === 0) ? outerR : innerR;
         const a = (i / (numPoints * 2)) * Math.PI * 2;
@@ -614,104 +734,85 @@ class StrategicCampaignMap {
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
-
-      // Deep zoom inner fortress moat & gun embrasures
-      if (z > 2.2) {
-        ctx.strokeStyle = '#fbbf24';
-        ctx.lineWidth = 1.0;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
-        ctx.stroke();
-      }
     } else {
       // Walled Town Citadel
       ctx.fillStyle = '#0f172a';
       ctx.strokeStyle = isSelected ? '#fbbf24' : '#64748b';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.arc(cx, cy, 8.5, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
     }
 
-    // Flagpole and Flag
-    const flagImg = this.flagImages[p.owner];
-    const flagW = z > 2.2 ? 22 : 18;
-    const flagH = z > 2.2 ? 14 : 11;
-    const flagX = cx - flagW * 0.5;
-    const flagY = cy - (z > 2.2 ? 25 : 20);
+    // Capital Ribbon Plaque with Anti-Collision Check
+    const shouldDrawName = isSelected || isHovered || isCapital || (p.developmentLevel >= 4 && z >= 1.6) || z >= 2.4;
 
-    if (flagImg && flagImg.complete && flagImg.naturalWidth > 0) {
-      ctx.strokeStyle = '#d4af37';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(flagX, flagY - 2);
-      ctx.lineTo(flagX, flagY + flagH + 4);
-      ctx.stroke();
+    if (shouldDrawName) {
+      const nameW = Math.max(48, p.capitalName.length * 6.0);
+      const nameH = 13;
+      const nameX = cx - nameW * 0.5;
+      const nameY = cy + 8;
 
-      ctx.drawImage(flagImg, flagX, flagY, flagW, flagH);
-      ctx.strokeStyle = '#d4af37';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(flagX, flagY, flagW, flagH);
-    } else {
-      ctx.fillStyle = '#fff';
-      ctx.font = '11px "Outfit", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(fac.banner || '⚔️', cx, cy - 14);
+      const canDraw = this._checkAndAddLabelBox(nameX, nameY, nameW, nameH, isSelected || isHovered);
+      if (canDraw) {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
+        ctx.strokeStyle = isSelected ? '#fbbf24' : (fac.colors.primary || '#d97706');
+        ctx.lineWidth = 1.0;
+        ctx.fillRect(nameX, nameY, nameW, nameH);
+        ctx.strokeRect(nameX, nameY, nameW, nameH);
+
+        ctx.fillStyle = isCapital ? '#fbbf24' : '#f8fafc';
+        ctx.font = `bold ${isCapital ? 9 : 8.5}px "Outfit", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.capitalName, cx, nameY + 6.5);
+      }
     }
 
-    // Capital Ribbon Plaque
-    const nameW = Math.max(54, p.capitalName.length * 6.2);
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
-    ctx.strokeStyle = isSelected ? '#fbbf24' : (fac.colors.primary || '#d97706');
-    ctx.lineWidth = 1.2;
-    ctx.fillRect(cx - nameW * 0.5, cy + 9, nameW, 13);
-    ctx.strokeRect(cx - nameW * 0.5, cy + 9, nameW, 13);
-
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 9px "Outfit", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(p.capitalName, cx, cy + 15.5);
-
     // =========================================================
-    // LOD TIER 3: MICRO FOCUS VIEW (Zoom > 2.2 - Europe Granular)
-    // Render Trade Good, Development Stars & Defense Tags
+    // CONTEXTUAL OVERLAYS: Strictly filtered by active Mapmode or Deep Micro Zoom
+    // Prevents the massive overlap seen in Political mode
     // =========================================================
-    if (z > 2.2) {
-      const tgInfo = tradeLabels[p.tradeGood] || tradeLabels.grain;
+    const tgInfo = tradeLabels[p.tradeGood] || tradeLabels.grain;
 
-      // 1. Trade Good & Yield Pill
-      const pillW = 68;
+    // 1. Trade Good Pill: ONLY in Trade mapmode OR Deep Zoom (z > 2.8)
+    if (this.mapMode === 'trade' || (z > 2.8 && (isSelected || isHovered))) {
+      const pillW = 62;
       const pillH = 12;
       const pillX = cx - pillW * 0.5;
-      const pillY = cy + 24;
+      const pillY = cy + 23;
 
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-      ctx.strokeStyle = tgInfo.color;
-      ctx.lineWidth = 1.0;
-      ctx.fillRect(pillX, pillY, pillW, pillH);
-      ctx.strokeRect(pillX, pillY, pillW, pillH);
+      if (this._checkAndAddLabelBox(pillX, pillY, pillW, pillH, isSelected || isHovered)) {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+        ctx.strokeStyle = tgInfo.color;
+        ctx.lineWidth = 1.0;
+        ctx.fillRect(pillX, pillY, pillW, pillH);
+        ctx.strokeRect(pillX, pillY, pillW, pillH);
 
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 8px "Outfit", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`${tgInfo.icon} ${tgInfo.name} • 🪙${p.calculateYield().gold}`, cx, pillY + 6);
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 8px "Outfit", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${tgInfo.icon} ${tgInfo.name}`, cx, pillY + 6);
+      }
+    }
 
-      // 2. Development Level Stars Badge
+    // 2. Development Stars: ONLY in Development mapmode OR Deep Zoom (z > 2.8)
+    if (this.mapMode === 'development' || (z > 2.8 && (isSelected || isHovered))) {
       const devStars = '★'.repeat(Math.min(5, p.developmentLevel || 1));
       ctx.fillStyle = '#fbbf24';
       ctx.font = '9px sans-serif';
-      ctx.fillText(devStars, cx, cy - 28);
+      ctx.textAlign = 'center';
+      ctx.fillText(devStars, cx, cy - 14);
+    }
 
-      // 3. Garrison Defense Indicator
-      if (p.garrison && p.garrison.length > 0) {
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '7.5px "Outfit", sans-serif';
-        ctx.fillText(`🛡️ Levas: ${p.garrison.length * 35}`, cx, pillY + 18);
-      }
+    // 3. Garrison Defense: ONLY in Military mapmode OR Deep Zoom (z > 2.8)
+    if ((this.mapMode === 'military' || z > 2.8) && p.garrison && p.garrison.length > 0) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '7.5px "Outfit", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`🛡️ Levas: ${p.garrison.length * 35}`, cx, cy + 36);
     }
 
     ctx.restore();
@@ -720,8 +821,9 @@ class StrategicCampaignMap {
   _renderMapDecoration(ctx) {
     // Screen-space Compass Rose
     ctx.save();
+    const crH = ctx.canvas ? ctx.canvas.height : (this.canvas ? this.canvas.height : 900);
     const crX = 65;
-    const crY = this.canvas.height - 65;
+    const crY = crH - 65;
 
     ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
     ctx.strokeStyle = '#d97706';

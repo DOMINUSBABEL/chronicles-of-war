@@ -37,6 +37,10 @@ class StrategicArmy {
     }
   }
 
+  get totalSoldiers() {
+    return this.getTotalSoldiers();
+  }
+
   getTotalSoldiers() {
     return this.regiments.reduce((acc, r) => acc + (r.soldiers || r.maxSoldiers || 40), 0);
   }
@@ -137,75 +141,85 @@ class StrategicArmy {
     this.currentMP = this.maxMP;
   }
 
-  renderOnCampaign(ctx) {
+  renderOnCampaign(ctx, isHovered = false, isSelected = false) {
     if (!this.isAlive) return;
 
     ctx.save();
-    const fac = FACTIONS[this.faction] || FACTIONS.spain;
+    const fac = (typeof FACTIONS !== 'undefined' && FACTIONS[this.faction]) ? FACTIONS[this.faction] : {
+      banner: '⚔️',
+      colors: { primary: '#d97706', accent: '#fbbf24' }
+    };
 
-    // 1. Army Base / Stand
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    const totalSoldiers = this.getTotalSoldiers();
+    const primaryColor = fac.colors.primary || '#d97706';
+
+    // 1. Compact AoH3 Army Counter Box
+    const boxW = Math.max(44, 26 + totalSoldiers.toString().length * 6.5);
+    const boxH = 15;
+    const boxX = this.x - boxW * 0.5;
+    const boxY = this.y - boxH * 0.5;
+
+    // Outer glow if selected
+    if (isSelected) {
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 8;
+    }
+
+    // Counter Background
+    ctx.fillStyle = isSelected ? 'rgba(30, 41, 59, 0.96)' : 'rgba(15, 23, 42, 0.90)';
+    ctx.strokeStyle = isSelected ? '#fbbf24' : primaryColor;
+    ctx.lineWidth = isSelected ? 1.8 : 1.2;
+
     ctx.beginPath();
-    ctx.ellipse(this.x, this.y + 10, 14, 6, 0, 0, Math.PI * 2);
+    ctx.roundRect(boxX, boxY, boxW, boxH, 4);
     ctx.fill();
-
-    // 2. Banner Pole
-    ctx.strokeStyle = '#475569';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(this.x, this.y + 10);
-    ctx.lineTo(this.x, this.y - 26);
     ctx.stroke();
 
-    // 3. Faction Banner Flag
-    ctx.fillStyle = fac.colors.primary;
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(this.x, this.y - 26);
-    ctx.lineTo(this.x + 22, this.y - 20);
-    ctx.lineTo(this.x, this.y - 12);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    ctx.shadowBlur = 0; // Reset shadow
 
-    // Flag heraldic icon
+    // Faction Banner & Soldier Count
     ctx.fillStyle = '#fff';
-    ctx.font = '10px "Outfit", sans-serif';
-    ctx.fillText(fac.banner, this.x + 6, this.y - 18);
-
-    // 4. Battalion Count Badge
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.arc(this.x + 16, this.y - 2, 9, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 9px "Outfit", sans-serif';
-    ctx.textAlign = 'center';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(this.regiments.length.toString(), this.x + 16, this.y - 2);
+    ctx.fillText(fac.banner || '⚔️', boxX + 4, boxY + boxH * 0.5);
 
-    // 5. General Name & Total Troops
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 10px "Outfit", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(this.commanderName, this.x, this.y + 24);
+    ctx.fillStyle = isSelected ? '#fbbf24' : '#f8fafc';
+    ctx.font = 'bold 9px "Outfit", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(totalSoldiers.toString(), boxX + boxW - 4, boxY + boxH * 0.5);
 
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '9px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText(`${this.getTotalSoldiers()} hombres`, this.x, this.y + 35);
+    // 2. Mini Movement Points Pip Bar (Below Counter)
+    const mpPercent = Math.max(0, Math.min(1, this.currentMP / this.maxMP));
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(boxX, boxY + boxH + 2, boxW, 2);
+    ctx.fillStyle = mpPercent > 0.5 ? '#10b981' : (mpPercent > 0.2 ? '#f59e0b' : '#ef4444');
+    ctx.fillRect(boxX, boxY + boxH + 2, boxW * mpPercent, 2);
 
-    // 6. Movement Points Bar
-    const mpWidth = 24;
-    const mpPercent = this.currentMP / this.maxMP;
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(this.x - mpWidth * 0.5, this.y - 32, mpWidth, 3);
-    ctx.fillStyle = '#10b981';
-    ctx.fillRect(this.x - mpWidth * 0.5, this.y - 32, mpWidth * mpPercent, 3);
+    // 3. Commander Tooltip (Only displayed if Hovered or Selected)
+    if (isHovered || isSelected) {
+      const tooltipW = Math.max(110, this.commanderName.length * 6.5);
+      const tooltipH = 24;
+      const tipX = this.x - tooltipW * 0.5;
+      const tipY = boxY - tooltipH - 6;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(tipX, tipY, tooltipW, tooltipH, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 9px "Outfit", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(this.commanderName, this.x, tipY + 9);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '8px sans-serif';
+      ctx.fillText(`${this.regiments.length} regimientos • ${totalSoldiers} hombres`, this.x, tipY + 19);
+    }
 
     ctx.restore();
   }
