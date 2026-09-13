@@ -813,8 +813,9 @@ class Unit {
     // 2. Render Outer Tactical Military Block (SandRhoman History Styling)
     this._renderTacticalBlock(ctx);
 
-    // 3. Render Health & Morale Gauges
-    this._renderHealthAndMorale(ctx);
+    // 3. Render Health & Morale Gauges with Smart LOD (anti-clutter)
+    const isDetailed = Boolean(this.selected || this.isHovered);
+    this._renderHealthAndMorale(ctx, isDetailed);
 
     ctx.restore();
   }
@@ -1312,98 +1313,168 @@ class Unit {
     ctx.restore();
   }
 
-  _renderHealthAndMorale(ctx) {
-    const barWidth = 36;
-    const barHeight = 3.5;
+  _renderHealthAndMorale(ctx, isDetailed = false) {
+    if (!isDetailed) {
+      // --- CLEAN MINIMALIST MILITARY PENNANT (Anti-Clutter, Total War aesthetic) ---
+      const barW = 26;
+      const barH = 2.5;
+      const barX = this.x - barW * 0.5;
+      const barY = this.y - this.radius - 8;
+
+      ctx.save();
+      // Faction swallowtail pennant standard
+      ctx.fillStyle = this.team === 0 ? '#2563eb' : '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(this.x - 4, barY - 7);
+      ctx.lineTo(this.x + 8, barY - 4);
+      ctx.lineTo(this.x - 4, barY - 1);
+      ctx.closePath();
+      ctx.fill();
+
+      // Brass flagpole
+      ctx.strokeStyle = '#d4af37';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(this.x - 4, barY - 8);
+      ctx.lineTo(this.x - 4, barY);
+      ctx.stroke();
+
+      // Mini Health Bar
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(barX - 0.5, barY + 1, barW + 1, barH + 2.5);
+
+      const healthPercent = Math.max(0, this.health / this.maxHealth);
+      ctx.fillStyle = healthPercent > 0.5 ? '#22c55e' : (healthPercent > 0.25 ? '#eab308' : '#ef4444');
+      ctx.fillRect(barX, barY + 1, barW * healthPercent, barH);
+
+      // Mini Morale Bar
+      const moralePercent = Math.max(0, this.morale / this.maxMorale);
+      ctx.fillStyle = this.isRouting ? '#ef4444' : '#38bdf8';
+      ctx.fillRect(barX, barY + barH + 1.5, barW * moralePercent, 1.5);
+
+      if (this.isRouting) {
+        ctx.fillStyle = '#ef4444';
+        ctx.font = 'bold 8px "Cinzel", serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('¡HUIDA!', this.x, barY - 10);
+      }
+      ctx.restore();
+      return;
+    }
+
+    // --- DETAILED COMMANDER'S REGIMENT DOSSIER (Rendered on Selection / Hover) ---
+    ctx.save();
+    const barWidth = 46;
+    const barHeight = 4.0;
     const hasAmmo = (this.range > 0 && this.maxAmmo > 0);
     const extraH = hasAmmo ? 3.0 : 0;
     const barX = this.x - barWidth * 0.5;
-    const barY = this.y - this.radius - 14 - extraH;
+    const barY = this.y - this.radius - 18 - extraH;
 
-    // Background panel
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
-    ctx.fillRect(barX - 1, barY - 1, barWidth + 2, (barHeight * 2) + 4 + extraH);
+    // Ornate Walnut & Brass Backing Plaque
+    ctx.fillStyle = 'rgba(20, 13, 8, 0.95)';
+    ctx.strokeStyle = '#b8862d';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.rect(barX - 2, barY - 14, barWidth + 4, (barHeight * 2) + 18 + extraH);
+    ctx.fill();
+    ctx.stroke();
 
-    // Green Health Bar
+    // Regiment Name (Classical Serif)
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 8.5px "Cinzel", Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.def.name, this.x, barY - 7);
+
+    // Green Health Bar with Brass Border
     const healthPercent = Math.max(0, this.health / this.maxHealth);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(barX, barY, barWidth, barHeight);
     ctx.fillStyle = healthPercent > 0.5 ? '#22c55e' : (healthPercent > 0.25 ? '#eab308' : '#ef4444');
     ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
 
-    // Blue Morale Bar
+    // Morale Bar
     const moralePercent = Math.max(0, this.morale / this.maxMorale);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(barX, barY + barHeight + 1, barWidth, barHeight);
     ctx.fillStyle = this.isRouting ? '#ef4444' : '#38bdf8';
     ctx.fillRect(barX, barY + barHeight + 1, barWidth * moralePercent, barHeight);
 
-    // Amber Ammunition Bar (for ranged regiments)
+    // Ammunition Bar
     if (hasAmmo) {
       const ammoPercent = Math.max(0, (this.ammo || 0) / this.maxAmmo);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(barX, barY + (barHeight * 2) + 2, barWidth, 2);
       ctx.fillStyle = (this.ammo <= 0) ? '#ef4444' : '#f59e0b';
       ctx.fillRect(barX, barY + (barHeight * 2) + 2, barWidth * ammoPercent, 2);
     }
 
-    // Regiment Name Label
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 9px "Outfit", sans-serif';
+    // Soldier Headcount Tag
+    ctx.fillStyle = '#f5eedc';
+    ctx.font = 'bold 7.5px "Cinzel", serif';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(this.def.name, this.x, barY - 3);
+    ctx.fillText(`${this.currentSoldiers} / ${this.maxSoldiers} h`, this.x, barY + (barHeight * 2) + 3 + extraH + 6);
 
-    // Total War Tactical Status Badges
-    const tacticalBadges = [];
-    if (this.isAmbushing) tacticalBadges.push({ text: '🌿 EMBOSCADA', color: '#10b981' });
-    if (this.guardMode) tacticalBadges.push({ text: '🛡️ GUARDIA', color: '#38bdf8' });
-    if (this.skirmishMode || this.skirmishStance) tacticalBadges.push({ text: '🏃 ESCARAMUZA', color: '#f59e0b' });
-    if (!this.fireAtWill || this.holdFire) tacticalBadges.push({ text: '🚫 ALTO EL FUEGO', color: '#ef4444' });
-    if (this.meleeStance) tacticalBadges.push({ text: '⚔️ MELEE', color: '#ec4899' });
+    // Tactical Status Badges: Arranged in a SINGLE horizontal row (never vertical stacking)
+    const activeBadges = [];
+    if (this.isAmbushing) activeBadges.push('🌿');
+    if (this.guardMode) activeBadges.push('🛡️');
+    if (this.skirmishMode || this.skirmishStance) activeBadges.push('🏃');
+    if (!this.fireAtWill || this.holdFire) activeBadges.push('🚫');
+    if (this.meleeStance) activeBadges.push('⚔️');
+    if (this.fatigue >= 50) activeBadges.push(this.fatigue >= 75 ? '⚡' : '💨');
+    if (this.supplyStatus === 'isolated') activeBadges.push('⚠️');
 
-    let badgeOffset = barY - 14 - (this.fatigue >= 50 ? 10 : 0);
-    tacticalBadges.forEach(badge => {
-      ctx.fillStyle = badge.color;
-      ctx.font = 'bold 8px "Outfit", sans-serif';
-      ctx.fillText(badge.text, this.x, badgeOffset);
-      badgeOffset -= 9;
-    });
+    if (activeBadges.length > 0) {
+      const bSize = 13;
+      const totalBW = activeBadges.length * (bSize + 3);
+      let bStartX = this.x - totalBW * 0.5 + bSize * 0.5;
+      const bY = barY - 22;
 
-    // Fatigue Indicator (if winded or exhausted)
-    if (this.fatigue >= 50) {
-      ctx.fillStyle = this.fatigue >= 75 ? '#ef4444' : '#f59e0b';
-      ctx.font = 'bold 8px "Outfit", sans-serif';
-      ctx.fillText(this.fatigue >= 75 ? '⚡ AGOTADO' : '💨 CANSADO', this.x, barY - 13);
+      activeBadges.forEach(badge => {
+        ctx.fillStyle = 'rgba(14, 9, 6, 0.9)';
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.arc(bStartX, bY, bSize * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = '8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(badge, bStartX, bY);
+
+        bStartX += bSize + 3;
+      });
     }
 
-    // Supply Isolation Warning (Wargame-style logistics alert)
-    if (this.supplyStatus === 'isolated') {
-      const blink = Math.sin(this.animTime * 8.0) > 0;
-      if (blink) {
-        ctx.fillStyle = '#ef4444';
-        ctx.font = 'bold 9px "Outfit", sans-serif';
-        ctx.fillText('⚠️ AISLADO', this.x, barY - (this.fatigue >= 50 ? 22 : 13));
-      }
-    }
-
-    // Active Formation Doctrine Badge (Total War depth)
+    // Active Formation Doctrine Tag
     if (this.activeDoctrine && this.activeDoctrine !== 'none' && !this.isRouting) {
       const doctrineTags = {
-        pike_wall: '🛡️ MURO PICAS',
-        charge: '⚔️ CARGA CHOQUE',
-        square: '🔲 CUADRO',
-        loose: '💨 DISPERSA',
-        volley: '💥 SALVA'
+        pike_wall: 'MURO PICAS',
+        charge: 'CARGA',
+        square: 'CUADRO',
+        loose: 'DISPERSA',
+        volley: 'SALVA'
       };
       const tag = doctrineTags[this.activeDoctrine];
       if (tag) {
         ctx.fillStyle = '#67e8f9';
-        ctx.font = 'bold 8px "Outfit", sans-serif';
-        ctx.fillText(tag, this.x, barY + (barHeight * 2) + 4 + extraH + 8);
+        ctx.font = 'bold 7.5px "Cinzel", serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`• ${tag} •`, this.x, barY + (barHeight * 2) + 3 + extraH + 16);
       }
     }
 
-    // Routing status alert
     if (this.isRouting) {
       ctx.fillStyle = '#ef4444';
-      ctx.font = 'bold 10px "Outfit", sans-serif';
-      ctx.fillText('¡HUIDA!', this.x, barY - 14);
+      ctx.font = 'bold 9px "Cinzel", serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('¡EN HUIDA!', this.x, barY - 24);
     }
+    ctx.restore();
   }
 }
 

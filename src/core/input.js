@@ -235,6 +235,22 @@ class InputController {
       this.lineCurX = this.mouseWorldX;
       this.lineCurY = this.mouseWorldY;
     }
+
+    // Track hovered unit for clean smart LOD
+    if (this.engine.units) {
+      let foundHover = null;
+      for (let i = 0; i < this.engine.units.length; i++) {
+        const u = this.engine.units[i];
+        if (!u.alive) continue;
+        if (Math.hypot(u.x - this.mouseWorldX, u.y - this.mouseWorldY) <= u.radius + 16) {
+          foundHover = u;
+          break;
+        }
+      }
+      for (let i = 0; i < this.engine.units.length; i++) {
+        this.engine.units[i].isHovered = (this.engine.units[i] === foundHover);
+      }
+    }
   }
 
   _onMouseUp(e) {

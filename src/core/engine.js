@@ -500,18 +500,35 @@ class GameEngine {
 
   _renderMinimap(ctx) {
     const mmSize = 180;
-    const mapW = (this.tacticalMap && this.tacticalMap.width) ? this.tacticalMap.width : 3200;
-    const mapH = (this.tacticalMap && this.tacticalMap.height) ? this.tacticalMap.height : 2400;
+    const mapW = (this.tacticalMap && this.tacticalMap.width) ? this.tacticalMap.width : 4800;
+    const mapH = (this.tacticalMap && this.tacticalMap.height) ? this.tacticalMap.height : 3200;
     const mmHeight = mmSize * (mapH / mapW);
-    const mmX = this.canvas.width - mmSize - 20;
-    const mmY = 20;
+    const mmX = this.canvas.width - mmSize - 18;
+    const mmY = 82; // Position below top bar
 
     ctx.save();
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 1.5;
+    // Antique walnut backing & shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = 'rgba(22, 14, 9, 0.94)';
     ctx.fillRect(mmX, mmY, mmSize, mmHeight);
+    ctx.shadowBlur = 0;
+
+    // Burnished brass astrolabe border
+    ctx.strokeStyle = '#c89b3c';
+    ctx.lineWidth = 1.6;
     ctx.strokeRect(mmX, mmY, mmSize, mmHeight);
+
+    // Inner fine contour frame
+    ctx.strokeStyle = 'rgba(140, 106, 35, 0.5)';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(mmX + 3, mmY + 3, mmSize - 6, mmHeight - 6);
+
+    // Title label
+    ctx.fillStyle = '#d4af37';
+    ctx.font = 'bold 7.5px "Cinzel", serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('CARTA TÁCTICA', mmX + mmSize - 6, mmY - 4);
 
     const scaleX = mmSize / mapW;
     const scaleY = mmHeight / mapH;
@@ -524,7 +541,7 @@ class GameEngine {
       }
     });
 
-    // Camps
+    // Camps on minimap
     this.tacticalMap.camps.forEach(c => {
       ctx.fillStyle = c.team === 0 ? '#3b82f6' : '#ef4444';
       ctx.beginPath();
@@ -539,15 +556,15 @@ class GameEngine {
       ctx.fillRect(mmX + u.x * scaleX - 2, mmY + u.y * scaleY - 2, 4, 4);
     });
 
-    // Camera Frustum
+    // Camera Frustum in gold
     const cam = this.camera;
     const frustumX = (-cam.x / cam.zoom) * scaleX;
     const frustumY = (-cam.y / cam.zoom) * scaleY;
     const frustumW = (this.canvas.width / cam.zoom) * scaleX;
     const frustumH = (this.canvas.height / cam.zoom) * scaleY;
 
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 1.2;
     ctx.strokeRect(mmX + frustumX, mmY + frustumY, frustumW, frustumH);
 
     ctx.restore();
