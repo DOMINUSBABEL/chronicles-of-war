@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chronicles of War: Empires of Steel & Powder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@500;600;700;800;900&family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,81 +17,119 @@
 
   <!-- BAROQUE MAIN MENU SCREEN (Age of Empires III & Total War Aesthetic) -->
   <div id="main-menu-screen" class="menu-overlay">
-    <div class="menu-decor-border">
-      <div class="menu-content">
-        <div class="menu-heraldry">
-          <span class="heraldic-icon">⚜️</span>
-          <span class="heraldic-icon">⚔️</span>
-          <span class="heraldic-icon">👑</span>
-        </div>
-        <h1 class="menu-main-title">CHRONICLES OF WAR</h1>
-        <h2 class="menu-sub-title">EMPIRES OF STEEL & POWDER</h2>
-        <p class="menu-tagline">Simulador Táctico RTS & Gran Campaña Estratégica 4X</p>
-        <div class="menu-divider"></div>
+    <!-- Atmospheric Gunpowder Smoke & Embers FX Canvas -->
+    <canvas id="menu-fx-canvas"></canvas>
 
+    <div class="menu-decor-border">
+      <!-- Ornate Carved Corner Brackets -->
+      <div class="menu-corner corner-tl"></div>
+      <div class="menu-corner corner-tr"></div>
+      <div class="menu-corner corner-bl"></div>
+      <div class="menu-corner corner-br"></div>
+
+      <div class="menu-content">
+        <!-- Classical Heraldic Cartouche Lockup -->
+        <div class="menu-header-cartouche">
+          <div class="menu-crest-frame">
+            <img src="assets/baroque_crest.jpg" alt="Imperial Heraldic Crest" class="menu-crest-img">
+          </div>
+          <div class="menu-motto-ribbon">
+            <span class="motto-flourish">⚜</span>
+            <span class="motto-text">ULTIMA RATIO REGUM • NON NOBIS DOMINE</span>
+            <span class="motto-flourish">⚜</span>
+          </div>
+          <h1 class="menu-main-title">CHRONICLES OF WAR</h1>
+          <h2 class="menu-sub-title">EMPIRES OF STEEL &amp; POWDER</h2>
+          <p class="menu-tagline">Gran Campaña Geopolítica 4X &amp; Simulador Táctico de Armas Combinadas</p>
+          <div class="menu-divider">
+            <span class="divider-line"></span>
+            <span class="divider-gem">✦</span>
+            <span class="divider-line"></span>
+          </div>
+        </div>
+
+        <!-- Antique Commission Placards (Menu Options) -->
         <div class="menu-buttons">
           <button class="btn-menu btn-campaign-launch" onclick="launchCampaignFromMenu()">
-            <span class="btn-menu-icon">🌍</span>
+            <div class="menu-seal seal-gold">
+              <span class="seal-icon">🌍</span>
+            </div>
             <div class="btn-menu-text">
               <span class="btn-menu-title">Gran Campaña 4X</span>
-              <span class="btn-menu-desc">Geopolítica mundial, diplomacia, economía de 4 recursos y conquista en el mapa histórico.</span>
+              <span class="btn-menu-desc">550 provincias mundiales, diplomacia imperial, economía de 4 recursos y proyección en globo 3D.</span>
             </div>
+            <span class="menu-btn-arrow">❯</span>
           </button>
 
           <button class="btn-menu btn-scenarios-launch" onclick="openHistoricalScenariosModal()">
-            <span class="btn-menu-icon">⚔️</span>
+            <div class="menu-seal seal-ruby">
+              <span class="seal-icon">⚔️</span>
+            </div>
             <div class="btn-menu-text">
               <span class="btn-menu-title">Escaramuzas Históricas</span>
               <span class="btn-menu-desc">Pavía (1525), Rocroi (1643), Sekigahara (1600), Waterloo (1815), Cannas y Agincourt.</span>
             </div>
+            <span class="menu-btn-arrow">❯</span>
           </button>
 
           <button class="btn-menu btn-custom-battle-launch" onclick="openCustomBattleModal()">
-            <span class="btn-menu-icon">🏛️</span>
+            <div class="menu-seal seal-bronze">
+              <span class="seal-icon">🏛️</span>
+            </div>
             <div class="btn-menu-text">
               <span class="btn-menu-title">Creador de Batallas y Ejércitos</span>
-              <span class="btn-menu-desc">Presupuesto en oro, 10 civilizaciones, regimientos a medida y generador de mapas Empire Earth.</span>
+              <span class="btn-menu-desc">Presupuesto en oro, 10 civilizaciones, regimientos a medida y generador de campos de batalla.</span>
             </div>
+            <span class="menu-btn-arrow">❯</span>
           </button>
 
           <button class="btn-menu btn-civ-builder-launch" onclick="openCivBuilderFromMenu()">
-            <span class="btn-menu-icon">👑</span>
+            <div class="menu-seal seal-emerald">
+              <span class="seal-icon">👑</span>
+            </div>
             <div class="btn-menu-text">
               <span class="btn-menu-title">Forjador de Civilizaciones</span>
-              <span class="btn-menu-desc">Distribuye puntos de civilización (Empire Earth) en doctrinas de infantería, pólvora y comercio.</span>
+              <span class="btn-menu-desc">Distribuye puntos de civilización (Empire Earth) en doctrinas de picas, pólvora y comercio imperial.</span>
             </div>
+            <span class="menu-btn-arrow">❯</span>
           </button>
 
           <button class="btn-menu btn-codex-launch" onclick="window.codexBellum.open()">
-            <span class="btn-menu-icon">📖</span>
-            <div class="btn-menu-text">
-              <span class="btn-menu-title">Codex Bellum (Enciclopedia)</span>
-              <span class="btn-menu-desc">Manual de armas combinadas, compendio de 18+ regimientos, logística militar y gran estrategia 4X.</span>
+            <div class="menu-seal seal-sapphire">
+              <span class="seal-icon">📖</span>
             </div>
+            <div class="btn-menu-text">
+              <span class="btn-menu-title">Codex Bellum (Tratados de Táctica)</span>
+              <span class="btn-menu-desc">Manual de armas combinadas, compendio de regimientos, logística militar y doctrina estratégica.</span>
+            </div>
+            <span class="menu-btn-arrow">❯</span>
           </button>
 
           <button class="btn-menu btn-multiplayer-launch" onclick="openP2PModal()">
-            <span class="btn-menu-icon">🌐</span>
-            <div class="btn-menu-text">
-              <span class="btn-menu-title">Multijugador P2P WebRTC</span>
-              <span class="btn-menu-desc">Batallas tácticas 1v1 directas entre navegadores sin coste de servidor dedicado.</span>
+            <div class="menu-seal seal-brass">
+              <span class="seal-icon">🌐</span>
             </div>
+            <div class="btn-menu-text">
+              <span class="btn-menu-title">Duelo Multijugador P2P WebRTC</span>
+              <span class="btn-menu-desc">Batallas tácticas 1v1 directas entre navegadores en tiempo real sin servidor dedicado.</span>
+            </div>
+            <span class="menu-btn-arrow">❯</span>
           </button>
         </div>
 
         <div class="menu-footer">
-          <span>Inspirado en Age of Empires III, Total War y Empire Earth</span>
+          <span>Inspirado en la gran estrategia histórica • Total War, Age of Empires III &amp; Europa Universalis</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Top Glassmorphism Navigation Bar -->
-  <header class="top-bar glass-panel">
+  <!-- Top Commander's Campaign Desk Navigation Bar (Puesto de Mando Imperial) -->
+  <header class="top-bar campaign-desk">
     <div class="logo-area">
       <div class="game-title">CHRONICLES OF WAR</div>
       <div id="mode-indicator" class="era-badge">🌍 Gran Campaña 4X</div>
-      <button id="btn-return-menu" class="btn-return-menu" onclick="returnToMainMenu()">🏛️ Menú</button>
+      <button id="btn-return-menu" class="btn-return-menu" onclick="returnToMainMenu()">🏛️ Cuartel General</button>
     </div>
 
     <!-- Mode Switcher Tabs & Quick Launch -->
@@ -756,6 +797,7 @@
   <!-- Game Scripts in Strict Dependency Order -->
   <script src="src/core/audio.js"></script>
   <script src="src/render/smoke_system.js"></script>
+  <script src="src/render/menu_ambience.js"></script>
   <script src="src/simulation/ballistics.js"></script>
   <script src="src/simulation/eras.js"></script>
   <script src="src/simulation/unit.js"></script>
@@ -791,6 +833,11 @@
     window.addEventListener('DOMContentLoaded', () => {
       window.game = new GameEngine('game-canvas');
       window.game.init();
+
+      if (window.MenuAmbience) {
+        window.menuAmbience = new MenuAmbience();
+        window.menuAmbience.init('menu-fx-canvas');
+      }
 
       updateRecruitmentButtons(window.game.currentEraKey);
     });
@@ -1147,6 +1194,7 @@
     function launchCampaignFromMenu() {
       const menuEl = document.getElementById('main-menu-screen');
       if (menuEl) menuEl.style.display = 'none';
+      if (window.menuAmbience) window.menuAmbience.stop();
       if (!window.game) return;
 
       window.game.gameState = 'game';
@@ -1158,12 +1206,14 @@
     function returnToMainMenu() {
       const menuEl = document.getElementById('main-menu-screen');
       if (menuEl) menuEl.style.display = 'flex';
+      if (window.menuAmbience) window.menuAmbience.start();
       if (window.game) window.game.gameState = 'menu';
     }
 
     function openCivBuilderFromMenu() {
       const menuEl = document.getElementById('main-menu-screen');
       if (menuEl) menuEl.style.display = 'none';
+      if (window.menuAmbience) window.menuAmbience.stop();
       if (window.game) {
         window.game.gameState = 'game';
         switchGameMode('campaign');
@@ -1186,6 +1236,7 @@
       closeHistoricalScenariosModal();
       const menuEl = document.getElementById('main-menu-screen');
       if (menuEl) menuEl.style.display = 'none';
+      if (window.menuAmbience) window.menuAmbience.stop();
 
       if (!window.game) return;
       window.game.gameState = 'game';
@@ -1334,6 +1385,7 @@
       closeCustomBattleModal();
       const menuEl = document.getElementById('main-menu-screen');
       if (menuEl) menuEl.style.display = 'none';
+      if (window.menuAmbience) window.menuAmbience.stop();
       window.game.gameState = 'game';
     }
   </script>
