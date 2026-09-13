@@ -69,6 +69,20 @@ class ParticleSystem {
     this.windX = 8.0; // gentle drift eastward
     this.windY = -3.0; // slight drift northward
     this.windOscillation = 0;
+    this.floatingTexts = [];
+  }
+
+  emitFloatingText(x, y, text, color = '#f59e0b') {
+    if (this.floatingTexts.length > 40) this.floatingTexts.shift();
+    this.floatingTexts.push({
+      x,
+      y,
+      text,
+      color,
+      life: 1.2,
+      maxLife: 1.2,
+      vy: -22
+    });
   }
 
   _getFreeParticle() {
@@ -88,6 +102,14 @@ class ParticleSystem {
         this.pool[i].update(dt, currentWindX, currentWindY);
       }
     }
+
+    // Update floating combat texts
+    for (let i = 0; i < this.floatingTexts.length; i++) {
+      const ft = this.floatingTexts[i];
+      ft.y += ft.vy * dt;
+      ft.life -= dt;
+    }
+    this.floatingTexts = this.floatingTexts.filter(ft => ft.life > 0);
   }
 
   emitMusketSmoke(x, y, angle, spread = 0.4) {
@@ -233,6 +255,31 @@ class ParticleSystem {
       }
       ctx.restore();
     }
+
+    // Render Floating Combat Texts (Flank, Rear, Out of Ammo)
+    if (this.floatingTexts.length > 0) {
+      ctx.save();
+      ctx.font = 'bold 11px "Outfit", sans-serif';
+      ctx.textAlign = 'center';
+      for (let i = 0; i < this.floatingTexts.length; i++) {
+        const ft = this.floatingTexts[i];
+        const alpha = Math.max(0, Math.min(1, ft.life / ft.maxLife));
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        // Dark outline for contrast
+        if (ctx.strokeText) {
+          ctx.strokeStyle = 'rgba(15, 23, 42, 0.9)';
+          ctx.lineWidth = 3;
+          ctx.strokeText(ft.text, ft.x, ft.y);
+        }
+        // Colored text fill
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
     ctx.restore();
   }
 }

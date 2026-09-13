@@ -159,6 +159,18 @@ class GameEngine {
       }
     }
 
+    // Check player supply wagons if no combat unit was clicked
+    if (!clickedUnit && this.supplySystem && this.supplySystem.supplyTrains) {
+      for (let i = 0; i < this.supplySystem.supplyTrains.length; i++) {
+        const st = this.supplySystem.supplyTrains[i];
+        if (!st.alive || st.team !== 0) continue;
+        if (Math.hypot(x - st.x, y - st.y) < st.radius + 12) {
+          clickedUnit = st;
+          break;
+        }
+      }
+    }
+
     if (!toggle) {
       this.deselectAll();
     }
@@ -192,6 +204,19 @@ class GameEngine {
       }
     }
 
+    if (this.supplySystem && this.supplySystem.supplyTrains) {
+      for (let i = 0; i < this.supplySystem.supplyTrains.length; i++) {
+        const st = this.supplySystem.supplyTrains[i];
+        if (!st.alive || st.team !== 0) continue;
+        if (st.x >= x1 && st.x <= x2 && st.y >= y1 && st.y <= y2) {
+          st.selected = true;
+          if (!this.selectedUnits.includes(st)) {
+            this.selectedUnits.push(st);
+          }
+        }
+      }
+    }
+
     if (this.selectedUnits.length > 0) {
       this.sound.playMarchDrums();
     }
@@ -200,6 +225,9 @@ class GameEngine {
 
   deselectAll() {
     this.selectedUnits.forEach(u => u.selected = false);
+    if (this.supplySystem && this.supplySystem.supplyTrains) {
+      this.supplySystem.supplyTrains.forEach(st => st.selected = false);
+    }
     this.selectedUnits = [];
     this._updateSelectionUI();
   }
@@ -334,60 +362,66 @@ class GameEngine {
   // --- MAIN SIMULATION & RENDER LOOP ---
 
   _loop(timestamp) {
-    const rawDt = Math.min(0.1, (timestamp - this.lastTime) / 1000);
-    this.lastTime = timestamp;
+    try {
+      const rawDt = Math.min(0.1, (timestamp - this.lastTime) / 1000);
+      this.lastTime = timestamp;
 
-    if (this.campaign && this.campaign.activeMode === 'campaign') {
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.campaign.render(this.ctx);
-      requestAnimationFrame((t) => this._loop(t));
-      return;
-    }
-
-    const dt = this.isPaused ? 0 : rawDt * this.gameSpeed;
-
-    if (dt > 0) {
-      // 1. Update AI
-      this._updateAI(dt);
-
-      // 2. Update Units
-      this.units.forEach(u => u.update(dt, this.tacticalMap, this.units, this.ballistics, this.particles, this.sound));
-
-      // 3. Update Ballistics
-      this.ballistics.update(dt, this.units, this.particles, this.sound);
-
-      // 4. Update Smoke & Particles
-      this.particles.update(dt);
-
-      // 5. Update Supply Lines, Command Points & Objectives (Wargame Logistics)
-      if (this.supplySystem) {
-        this.supplySystem.update(dt, this.units);
+      if (this.campaign && this.campaign.activeMode === 'campaign') {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.campaign.render(this.ctx);
+        return;
       }
 
-      // 6. Update Persistent Casualties
-      this.battlefieldCasualties = this.battlefieldCasualties.filter(c => {
-        c.life -= dt;
-        return c.life > 0;
-      });
+      const dt = this.isPaused ? 0 : rawDt * this.gameSpeed;
 
-      // 7. Update Territory Frontline
-      this.territory.update(dt, this.units, this.tacticalMap.camps);
+      if (dt > 0) {
+        // 1. Update AI
+        this._updateAI(dt);
 
-      // Passive income
-      this.gold += dt * 15;
+        // 2. Update Units
+        this.units.forEach(u => u.update(dt, this.tacticalMap, this.units, this.ballistics, this.particles, this.sound));
+
+        // 3. Update Ballistics
+        this.ballistics.update(dt, this.units, this.particles, this.sound);
+
+        // 4. Update Smoke & Particles
+        this.particles.update(dt);
+
+        // 5. Update Supply Lines, Command Points & Objectives (Wargame Logistics)
+        if (this.supplySystem) {
+          this.supplySystem.update(dt, this.units);
+        }
+
+        // 6. Update Persistent Casualties
+        this.battlefieldCasualties = this.battlefieldCasualties.filter(c => {
+          c.life -= dt;
+          return c.life > 0;
+        });
+
+        // 7. Update Territory Frontline
+        this.territory.update(dt, this.units, this.tacticalMap.camps);
+
+        // Passive income
+        this.gold += dt * 15;
+      }
+
+      // 8. Clean up dead units
+      this.units = this.units.filter(u => u.alive || u.isRouting);
+      this.selectedUnits = this.selectedUnits.filter(u => u.alive);
+
+      // 9. Render Everything (Single-Pass Clear Canvas per subgeist_naturaleza.md)
+      this._render();
+
+      // 10. Update HUD Info & Drawer Telemetry
+      this._updateHUD();
+      if (this.tacticalDrawerOpen) {
+        this._updateTacticalDrawerLiveTelemetry();
+      }
+    } catch (loopErr) {
+      console.error('⚠️ [Engine Loop Resilient Catch]:', loopErr);
+    } finally {
+      requestAnimationFrame((t) => this._loop(t));
     }
-
-    // 8. Clean up dead units
-    this.units = this.units.filter(u => u.alive || u.isRouting);
-    this.selectedUnits = this.selectedUnits.filter(u => u.alive);
-
-    // 9. Render Everything (Single-Pass Clear Canvas per subgeist_naturaleza.md)
-    this._render();
-
-    // 10. Update HUD Info
-    this._updateHUD();
-
-    requestAnimationFrame((t) => this._loop(t));
   }
 
   _render() {
@@ -594,11 +628,51 @@ class GameEngine {
     if (!panel) return;
 
     if (this.selectedUnits.length === 0) {
-      panel.innerHTML = '<div class="no-selection">Ningún regimiento seleccionado.<br><small>Haz clic o arrastra un lazo para seleccionar tropas.</small></div>';
+      panel.innerHTML = '<div class="no-selection">Ningún regimiento seleccionado.<br><small>Haz clic o arrastra un lazo para seleccionar tropas o carros de bagajes.</small></div>';
       return;
     }
 
     const u = this.selectedUnits[0];
+
+    // Specialized Telemetry Card for Mobile Supply Trains (Logistics)
+    if (u.isSupplyTrain) {
+      const hpPct = Math.round((u.health / u.maxHealth) * 100);
+      const suppPct = Math.round((u.suppliesRemaining / 4000) * 100);
+      panel.innerHTML = `
+        <div class="unit-card supply-train-card" style="border-left: 3px solid #f59e0b;">
+          <div class="unit-header">
+            <span class="unit-badge">📦</span>
+            <div class="unit-titles">
+              <h4>${u.def.name}</h4>
+              <span class="unit-cat" style="color: #fbbf24">LOGÍSTICA MÓVIL • CONVOY DE INTENDENCIA</span>
+            </div>
+          </div>
+          <div class="unit-bars">
+            <div class="bar-row">
+              <span>Integridad de Carros:</span>
+              <strong style="color: ${hpPct > 40 ? '#22c55e' : '#ef4444'}">${Math.round(u.health)} / ${u.maxHealth} (${hpPct}%)</strong>
+            </div>
+            <div class="bar-row">
+              <span>Reserva de Pólvora & Víveres:</span>
+              <strong style="color: #f59e0b">${Math.round(u.suppliesRemaining)} pts (${suppPct}%)</strong>
+            </div>
+            <div class="bar-row">
+              <span>Radio Logístico:</span>
+              <strong style="color: #38bdf8">${u.supplyRadius} px</strong>
+            </div>
+            <div class="bar-row">
+              <span>Velocidad de Marcha:</span>
+              <strong style="color: #cbd5e1">${u.speed} px/s</strong>
+            </div>
+          </div>
+          <div style="margin-top: 8px; font-size: 11px; color: #94a3b8; line-height: 1.4; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(245, 158, 11, 0.2);">
+            💡 <em>Haz clic derecho en el terreno para ordenar al convoy que avance o se repliegue. Las tropas dentro de su aura circular reciben munición continua y recuperación de fatiga acelerada.</em>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
     const totalSelected = this.selectedUnits.length;
     const isPike = (u.def.category === 'pikes' || u.def.weaponType === 'pike' || u.def.weaponType === 'tercio_hybrid');
     const isRanged = (u.range > 0);
@@ -670,6 +744,127 @@ class GameEngine {
         </div>
       </div>
     `;
+  }
+
+  // --- ARMY-WIDE TACTICAL DOCTRINES & DRAWER CONTROLS ---
+
+  toggleTacticalDrawer() {
+    this.tacticalDrawerOpen = !this.tacticalDrawerOpen;
+    const drawer = document.getElementById('tactical-command-drawer');
+    const toggleBtn = document.getElementById('btn-tactical-drawer-toggle');
+    if (drawer) {
+      drawer.classList.toggle('open', this.tacticalDrawerOpen);
+    }
+    if (toggleBtn) {
+      toggleBtn.classList.toggle('active', this.tacticalDrawerOpen);
+      toggleBtn.innerHTML = this.tacticalDrawerOpen ? '⚜️ Puesto de Mando ⏶' : '⚜️ Puesto de Mando ⏷';
+    }
+    if (this.tacticalDrawerOpen) {
+      this._updateTacticalDrawerLiveTelemetry();
+    }
+  }
+
+  setArmyRuleOfEngagement(rule) {
+    this.currentArmyROE = rule;
+    this.units.filter(u => u.team === 0).forEach(u => {
+      u.holdFire = (rule === 'hold_fire');
+      u.skirmishStance = (rule === 'skirmish');
+    });
+
+    const msg = rule === 'hold_fire' 
+      ? '🤫 ¡ALTO EL FUEGO ordenado a todo el ejército! Ahorro estricto de munición.' 
+      : (rule === 'skirmish' ? '💨 ¡GUERRILLA TÁCTICA! Regimientos mantendrán distancia.' : '💥 ¡FUEGO A DISCRECIÓN! Autorizadas salvas libres.');
+    this.addLogMessage(msg);
+    if (this.sound) this.sound.playMarchDrums();
+    this._updateTacticalDrawerLiveTelemetry();
+  }
+
+  orderArmyRetreat() {
+    this.units.filter(u => u.team === 0 && u.alive).forEach(u => {
+      u.setFormation('column');
+      u.setTarget(u.x - 300, u.y);
+    });
+    this.addLogMessage('🚩 ¡REPLIEGUE EN ORDEN! Los batallones se repliegan en columna.');
+    if (this.sound) this.sound.playTrumpetCall();
+  }
+
+  orderArmyFullCharge() {
+    this.units.filter(u => u.team === 0 && u.alive).forEach(u => {
+      u.setDoctrine('charge');
+    });
+    this.addLogMessage('⚔️ ¡CARGA GENERAL DE CHOQUE! A la bayoneta / carga decisiva.');
+    if (this.sound) this.sound.playTrumpetCall();
+  }
+
+  orderArmyAdvanceInLine() {
+    this.units.filter(u => u.team === 0 && u.alive).forEach(u => {
+      u.setFormation('line');
+      u.setTarget(u.x + 260, u.y);
+    });
+    this.addLogMessage('🛡️ ¡AVANCE EN LÍNEA DE BATALLA! Frente entero avanza coordinado.');
+    if (this.sound) this.sound.playMarchDrums();
+  }
+
+  centerOnSupplyTrain() {
+    if (!this.supplySystem) return;
+    const train = this.supplySystem.supplyTrains.find(st => st.team === 0 && st.alive);
+    if (train) {
+      this.camera.x = this.canvas.width * 0.5 - train.x * this.camera.zoom;
+      this.camera.y = this.canvas.height * 0.5 - train.y * this.camera.zoom;
+      this.addLogMessage('📦 Cámara centrada en el Convoy de Bagajes y Pólvora.');
+      this.deselectAll();
+      train.selected = true;
+      this.selectedUnits = [train];
+      this._updateSelectionUI();
+    }
+  }
+
+  _updateTacticalDrawerLiveTelemetry() {
+    const blueUnits = this.units.filter(u => u.team === 0 && u.alive);
+    const redUnits = this.units.filter(u => u.team === 1 && u.alive);
+
+    // Casualties
+    let playerKills = 0;
+    let playerLosses = 0;
+    let totalFatigue = 0;
+    let suppliedCount = 0;
+
+    blueUnits.forEach(u => {
+      playerKills += (u.kills || 0);
+      playerLosses += (u.losses || 0);
+      totalFatigue += (u.fatigue || 0);
+      if (u.supplyStatus === 'supplied') suppliedCount++;
+    });
+
+    const avgFatigue = blueUnits.length > 0 ? Math.round(totalFatigue / blueUnits.length) : 0;
+    const suppPct = blueUnits.length > 0 ? Math.round((suppliedCount / blueUnits.length) * 100) : 0;
+
+    const elKills = document.getElementById('drawer-stat-kills');
+    const elLosses = document.getElementById('drawer-stat-losses');
+    const elFatigue = document.getElementById('drawer-stat-fatigue');
+    const elSupplied = document.getElementById('drawer-stat-supply');
+    const elWagonAmmo = document.getElementById('drawer-stat-wagon-ammo');
+
+    if (elKills) elKills.innerText = playerKills;
+    if (elLosses) elLosses.innerText = playerLosses;
+    if (elFatigue) {
+      elFatigue.innerText = `${avgFatigue}%`;
+      elFatigue.style.color = avgFatigue > 50 ? '#ef4444' : (avgFatigue > 25 ? '#f59e0b' : '#22c55e');
+    }
+    if (elSupplied) {
+      elSupplied.innerText = `${suppPct}%`;
+      elSupplied.style.color = suppPct > 70 ? '#22c55e' : (suppPct > 40 ? '#f59e0b' : '#ef4444');
+    }
+
+    if (elWagonAmmo && this.supplySystem) {
+      const train = this.supplySystem.supplyTrains.find(st => st.team === 0 && st.alive);
+      if (train) {
+        elWagonAmmo.innerText = `${Math.round(train.suppliesRemaining)} pts`;
+      } else {
+        elWagonAmmo.innerText = '0 (Destruido)';
+        elWagonAmmo.style.color = '#ef4444';
+      }
+    }
   }
 }
 
