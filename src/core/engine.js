@@ -655,6 +655,64 @@ class GameEngine {
     this._updateSelectionUI();
   }
 
+  toggleFireAtWillForSelected() {
+    if (this.selectedUnits.length === 0) return;
+    const newState = !this.selectedUnits[0].fireAtWill;
+    this.selectedUnits.forEach(u => {
+      u.fireAtWill = newState;
+      u.holdFire = !newState;
+    });
+    this.addLogMessage(newState ? '🔥 ¡Fuego a discreción activado [F]!' : '🚫 ¡Alto el fuego ordenado [F]!');
+    this._updateSelectionUI();
+  }
+
+  toggleGuardModeForSelected() {
+    if (this.selectedUnits.length === 0) return;
+    const newState = !this.selectedUnits[0].guardMode;
+    this.selectedUnits.forEach(u => {
+      u.guardMode = newState;
+      if (newState) {
+        u.guardAnchorX = u.x;
+        u.guardAnchorY = u.y;
+      }
+    });
+    this.addLogMessage(newState ? '🛡️ ¡Modo Guardia activado [G]! (+25% defensa melee, mantener línea)' : '🛡️ Modo Guardia desactivado [G].');
+    this._updateSelectionUI();
+  }
+
+  toggleSkirmishModeForSelected() {
+    if (this.selectedUnits.length === 0) return;
+    const newState = !(this.selectedUnits[0].skirmishMode || this.selectedUnits[0].skirmishStance);
+    this.selectedUnits.forEach(u => {
+      u.skirmishMode = newState;
+      u.skirmishStance = newState;
+    });
+    this.addLogMessage(newState ? '🏃 ¡Modo Escaramuza activado [K]! (Kiting táctico)' : '🏃 Modo Escaramuza desactivado [K].');
+    this._updateSelectionUI();
+  }
+
+  toggleMeleeStanceForSelected() {
+    if (this.selectedUnits.length === 0) return;
+    const newState = !this.selectedUnits[0].meleeStance;
+    this.selectedUnits.forEach(u => {
+      u.meleeStance = newState;
+    });
+    this.addLogMessage(newState ? '⚔️ ¡Stance Cuerpo a Cuerpo activado [T]!' : '🏹 Stance a Distancia reanudado [T].');
+    this._updateSelectionUI();
+  }
+
+  toggleAmbushForSelected() {
+    if (this.selectedUnits.length === 0) return;
+    this.selectedUnits.forEach(u => {
+      if (u.inForest) {
+        u.isAmbushing = !u.isAmbushing;
+      }
+    });
+    const anyAmbush = this.selectedUnits.some(u => u.isAmbushing);
+    this.addLogMessage(anyAmbush ? '🌿 ¡Posición de Emboscada adoptada! (+60% impacto moral al sorprender)' : '🌿 Emboscada cancelada.');
+    this._updateSelectionUI();
+  }
+
   callTacticalReinforcement(unitKey) {
     if (this.supplySystem) {
       this.supplySystem.callPlayerReinforcement(unitKey);
@@ -783,6 +841,17 @@ class GameEngine {
             <button onclick="window.game.setFormationForSelected('skirmish')" class="btn-action ${u.currentFormation === 'skirmish' ? 'active' : ''}">Guerrilla [4]</button>
           </div>
         </div>
+
+        <div class="unit-tactics-section" style="margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
+          <div style="font-size: 10px; color: #94a3b8; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Órdenes Tácticas:</div>
+          <div class="unit-actions" style="display: flex; flex-wrap: wrap; gap: 4px;">
+            <button onclick="window.game.toggleFireAtWillForSelected()" class="btn-action ${u.fireAtWill && !u.holdFire ? 'active' : ''}">${u.fireAtWill && !u.holdFire ? '🔥 Fuego Libre [F]' : '🚫 Alto Fuego [F]'}</button>
+            <button onclick="window.game.toggleGuardModeForSelected()" class="btn-action ${u.guardMode ? 'active' : ''}">🛡️ Guardia [G]</button>
+            <button onclick="window.game.toggleSkirmishModeForSelected()" class="btn-action ${u.skirmishMode || u.skirmishStance ? 'active' : ''}">🏃 Escaramuza [K]</button>
+            ${isRanged ? `<button onclick="window.game.toggleMeleeStanceForSelected()" class="btn-action ${u.meleeStance ? 'active' : ''}">${u.meleeStance ? '⚔️ Melee [T]' : '🏹 Distancia [T]'}</button>` : ''}
+            ${u.inForest ? `<button onclick="window.game.toggleAmbushForSelected()" class="btn-action ${u.isAmbushing ? 'active' : ''}">🌿 Emboscada</button>` : ''}
+          </div>
+        </div>
       </div>
     `;
   }
@@ -809,12 +878,24 @@ class GameEngine {
     this.currentArmyROE = rule;
     this.units.filter(u => u.team === 0).forEach(u => {
       u.holdFire = (rule === 'hold_fire');
+      u.fireAtWill = (rule !== 'hold_fire');
       u.skirmishStance = (rule === 'skirmish');
+      u.skirmishMode = (rule === 'skirmish');
+      u.guardMode = (rule === 'guard');
+      if (rule === 'guard') {
+        u.guardAnchorX = u.x;
+        u.guardAnchorY = u.y;
+      }
     });
 
-    const msg = rule === 'hold_fire' 
-      ? '🤫 ¡ALTO EL FUEGO ordenado a todo el ejército! Ahorro estricto de munición.' 
-      : (rule === 'skirmish' ? '💨 ¡GUERRILLA TÁCTICA! Regimientos mantendrán distancia.' : '💥 ¡FUEGO A DISCRECIÓN! Autorizadas salvas libres.');
+    let msg = '💥 ¡FUEGO A DISCRECIÓN! Autorizadas salvas libres.';
+    if (rule === 'hold_fire') {
+      msg = '🤫 ¡ALTO EL FUEGO ordenado a todo el ejército! Ahorro estricto de munición.';
+    } else if (rule === 'skirmish') {
+      msg = '💨 ¡GUERRILLA TÁCTICA! Regimientos mantendrán distancia.';
+    } else if (rule === 'guard') {
+      msg = '🛡️ ¡MODO GUARDIA GENERAL! Mantener la línea firme (+25% defensa melee).';
+    }
     this.addLogMessage(msg);
     if (this.sound) this.sound.playMarchDrums();
     this._updateTacticalDrawerLiveTelemetry();

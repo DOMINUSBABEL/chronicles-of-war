@@ -379,6 +379,27 @@ class InputController {
     if (e.key.toLowerCase() === 'c') {
       this.engine.deselectAll();
     }
+
+    // Total War Tactical Hotkeys
+    // F: Toggle Fire at Will / Hold Fire
+    if (e.key.toLowerCase() === 'f') {
+      this.engine.toggleFireAtWillForSelected();
+    }
+
+    // G: Toggle Guard Mode
+    if (e.key.toLowerCase() === 'g') {
+      this.engine.toggleGuardModeForSelected();
+    }
+
+    // K: Toggle Skirmish Mode
+    if (e.key.toLowerCase() === 'k') {
+      this.engine.toggleSkirmishModeForSelected();
+    }
+
+    // T: Toggle Melee Stance (charge into melee for ranged units)
+    if (e.key.toLowerCase() === 't') {
+      this.engine.toggleMeleeStanceForSelected();
+    }
   }
 
   _onKeyUp(e) {
@@ -424,9 +445,9 @@ class InputController {
     if (this.mouseScreenY >= 0 && this.mouseScreenY <= edgeMargin) cam.y += panSpeed * 0.8;
     if (this.mouseScreenY >= this.canvas.height - edgeMargin && this.mouseScreenY <= this.canvas.height) cam.y -= panSpeed * 0.8;
 
-    // 3. Clamping Camera inside Battlefield Bounds
-    const mapW = (this.engine.tacticalMap && this.engine.tacticalMap.width) ? this.engine.tacticalMap.width : 3200;
-    const mapH = (this.engine.tacticalMap && this.engine.tacticalMap.height) ? this.engine.tacticalMap.height : 2400;
+    // 3. Clamping Camera inside Battlefield Bounds (4800x3200 operational scale)
+    const mapW = (this.engine.tacticalMap && this.engine.tacticalMap.width) ? this.engine.tacticalMap.width : 4800;
+    const mapH = (this.engine.tacticalMap && this.engine.tacticalMap.height) ? this.engine.tacticalMap.height : 3200;
 
     const minX = -(mapW * cam.zoom - this.canvas.width + 80);
     const minY = -(mapH * cam.zoom - this.canvas.height + 80);

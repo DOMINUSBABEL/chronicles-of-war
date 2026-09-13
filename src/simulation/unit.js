@@ -153,11 +153,19 @@ class Unit {
     // Animation & wind timer
     this.animTime = Math.random() * 10;
 
-    // Abilities & stances
+    // Total War Tactical Suite
+    this.fireAtWill = true; // Rule of engagement: Fire at will (default true)
+    this.holdFire = false;  // Synced with !fireAtWill
+    this.skirmishMode = false; // Rule of engagement: Automatically kite away from approaching melee enemies
+    this.skirmishStance = false; // Synced with skirmishMode
+    this.guardMode = false; // Guard Mode: +25% melee defense, hold battle line, refuse to pursue routing enemies
+    this.guardAnchorX = x;
+    this.guardAnchorY = y;
+    this.isAmbushing = false; // Forest ambush stance: cloaked until enemy <= 95px, +60% surprise morale shock
+    this.meleeStance = false; // Melee stance toggle for ranged units (charge with sidearms/bayonets)
+    this.forestTime = 0;
     this.activeStance = null;
     this.pilumVolleysLeft = unitDef.maxVolleys || 0;
-    this.holdFire = false; // Rule of engagement: Hold fire to preserve ammo or ambush
-    this.skirmishStance = false; // Rule of engagement: Keep distance from approaching melee enemies
 
     // Create micro-soldiers
     this.soldiers = [];
@@ -274,6 +282,7 @@ class Unit {
     if (!this.alive) return;
 
     this.animTime += dt;
+    let isMoving = Math.hypot(this.targetX - this.x, this.targetY - this.y) > 6;
 
     // 0. Charge Duration & Speed Restoration
     if (this.isCharging) {
@@ -300,14 +309,16 @@ class Unit {
         this.isWater = false;
         if (terrain === 'forest') {
           this.inForest = true;
+          this.forestTime = (this.forestTime || 0) + dt;
           terrainSpeedMult = (this.def.category === 'cavalry' || this.def.category === 'artillery') ? 0.4 : 0.85;
-        } else if (terrain === 'road') {
-          terrainSpeedMult = 1.35;
-        } else if (terrain === 'mud') {
-          terrainSpeedMult = 0.55;
-        } else if (terrain === 'hill') {
-          this.elevationLevel = 1.5;
-          terrainSpeedMult = 0.85;
+          // Stationary in forest: unit naturally conceals into ambush stance
+          if (!isMoving && this.forestTime > 2.0 && !this.inCombat) {
+            this.isAmbushing = true;
+          }
+        } else {
+          this.inForest = false;
+          this.isAmbushing = false;
+          this.forestTime = 0;
         }
       }
       this.isNearCamp = map.isNearCamp(this.x, this.y, this.team);
@@ -347,6 +358,7 @@ class Unit {
       this.isRouting = true;
       this.activeStance = null;
       this.activeDoctrine = 'none';
+      this.isAmbushing = false;
       const enemy = this._findNearestEnemy(allUnits);
       if (enemy) {
         const fleeAngle = Math.atan2(this.y - enemy.y, this.x - enemy.x);
@@ -355,12 +367,20 @@ class Unit {
       }
     }
 
+    // Guard Mode: If out of combat and drifting away from guard post, return to anchor
+    if (this.guardMode && !this.inCombat && !isMoving && this.waypoints.length === 0) {
+      const distToAnchor = Math.hypot(this.x - this.guardAnchorX, this.y - this.guardAnchorY);
+      if (distToAnchor > 35) {
+        this.targetX = this.guardAnchorX;
+        this.targetY = this.guardAnchorY;
+      }
+    }
+
     // 6. Movement & Fatigue Effects
     const dx = this.targetX - this.x;
     const dy = this.targetY - this.y;
     const distToTarget = Math.hypot(dx, dy);
 
-    let isMoving = false;
     const fatigueFactor = this.fatigue >= 75 ? 0.60 : (this.fatigue >= 50 ? 0.80 : (this.fatigue >= 25 ? 0.95 : 1.0));
 
     if (distToTarget > 6) {
@@ -379,9 +399,9 @@ class Unit {
       // Add movement fatigue
       this.fatigue = Math.min(100, this.fatigue + (this.isCharging ? 4.8 : 1.2) * dt);
 
-      // Clamping inside battlefield perimeter (Prevents units from escaping map)
-      const mapW = (map && map.width) ? map.width : 3200;
-      const mapH = (map && map.height) ? map.height : 2400;
+      // Clamping inside battlefield perimeter (Supports 4800x3200 operational battlefield)
+      const mapW = (map && map.width) ? map.width : 4800;
+      const mapH = (map && map.height) ? map.height : 3200;
       this.x = Math.max(20, Math.min(mapW - 20, this.x));
       this.y = Math.max(20, Math.min(mapH - 20, this.y));
 
@@ -408,31 +428,45 @@ class Unit {
       const distToEnemy = Math.hypot(nearestEnemy.x - this.x, nearestEnemy.y - this.y);
       const enemyAngle = Math.atan2(nearestEnemy.y - this.y, nearestEnemy.x - this.x);
 
-      // Melee Range
-      const meleeEngagementDist = this.radius + nearestEnemy.radius + 8;
-      if (distToEnemy <= meleeEngagementDist) {
-        this.inCombat = true;
-        const combatAngleDiff = Math.atan2(Math.sin(enemyAngle - this.angle), Math.cos(enemyAngle - this.angle));
-        this.angle += combatAngleDiff * Math.min(1.0, 8.0 * dt);
+      // Skirmish Mode: If enemy melee or cavalry is closing in, kite backward away from threat
+      const isSkirmishing = (this.skirmishMode || this.skirmishStance) && !this.meleeStance && this.range > 0;
+      if (isSkirmishing) {
+        const threatDist = Math.max(160, this.range * 0.48);
+        if (distToEnemy < threatDist && (nearestEnemy.range === 0 || nearestEnemy.def.category === 'cavalry' || nearestEnemy.def.category === 'pikes' || distToEnemy < 110)) {
+          const retreatAngle = Math.atan2(this.y - nearestEnemy.y, this.x - nearestEnemy.x);
+          this.targetX = this.x + Math.cos(retreatAngle) * 110;
+          this.targetY = this.y + Math.sin(retreatAngle) * 110;
+          this.targetAngle = retreatAngle;
+        }
+      }
 
-        this._resolveMeleeCombat(nearestEnemy, dt, particles, audio);
+      // Melee Range or Melee Stance
+      const meleeEngagementDist = this.radius + nearestEnemy.radius + 8;
+      if (distToEnemy <= meleeEngagementDist || this.meleeStance) {
+        if (this.meleeStance && distToEnemy > meleeEngagementDist) {
+          // Ranged unit in melee stance charges aggressively toward enemy
+          this.targetX = nearestEnemy.x;
+          this.targetY = nearestEnemy.y;
+        } else {
+          this.inCombat = true;
+          const combatAngleDiff = Math.atan2(Math.sin(enemyAngle - this.angle), Math.cos(enemyAngle - this.angle));
+          this.angle += combatAngleDiff * Math.min(1.0, 8.0 * dt);
+
+          this._resolveMeleeCombat(nearestEnemy, dt, particles, audio);
+        }
       }
       // Ranged Combat (Elevation grants +25% range)
-      else if (this.range > 0 && !isMoving) {
+      else if (this.range > 0 && !isMoving && !this.meleeStance) {
+        // Minimum range for artillery (dead zone at 80px)
+        const minRange = (this.def.category === 'artillery') ? 80 : 0;
         const effectiveRange = this.range * (this.elevationLevel > 0 ? 1.25 : 1.0);
-        if (distToEnemy <= effectiveRange) {
-          // Skirmish mode: if enemy is closing in (< 45% range), back away while firing
-          if (this.skirmishStance && distToEnemy < this.range * 0.45) {
-            const retreatAngle = Math.atan2(this.y - nearestEnemy.y, this.x - nearestEnemy.x);
-            this.targetX = this.x + Math.cos(retreatAngle) * 70;
-            this.targetY = this.y + Math.sin(retreatAngle) * 70;
-          }
 
+        if (distToEnemy <= effectiveRange && distToEnemy >= minRange) {
           const combatAngleDiff = Math.atan2(Math.sin(enemyAngle - this.angle), Math.cos(enemyAngle - this.angle));
           this.angle += combatAngleDiff * Math.min(1.0, 5.0 * dt);
 
-          // Fire only if hold fire is not active
-          if (!this.holdFire) {
+          // Fire only if Fire at Will is active and holdFire is false
+          if (this.fireAtWill && !this.holdFire) {
             const reloadFactor = this.fatigue >= 75 ? 1.5 : (this.fatigue >= 50 ? 1.2 : 1.0);
             this.reloadTimer -= dt;
             if (this.reloadTimer <= 0) {
@@ -470,6 +504,8 @@ class Unit {
       const other = allUnits[i];
       if (other.team === this.team || !other.alive) continue;
       const d = Math.hypot(other.x - this.x, other.y - this.y);
+      // Ambush Concealment: Units in forest ambush stance cannot be targeted if d > 95px
+      if (other.isAmbushing && d > 95) continue;
       if (d < minDist) {
         minDist = d;
         nearest = other;
@@ -481,6 +517,16 @@ class Unit {
   _resolveMeleeCombat(enemy, dt, particles, audio) {
     // Damage scales with remaining soldiers and unit category advantage
     let damageFactor = this.meleeDamage * (this.currentSoldiers / this.maxSoldiers);
+
+    // Ambush Strike Surprise Shock (+40% surprise damage, +25 morale shock)
+    if (this.isAmbushing) {
+      damageFactor *= 1.40;
+      enemy.morale -= 25.0;
+      this.isAmbushing = false;
+      if (particles) {
+        particles.emitFloatingText(this.x, this.y - 25, '¡EMBOSCADA SORPRESA!', '#10b981');
+      }
+    }
 
     // Tactical Doctrines & Category Modifiers
     if (this.def.category === 'pikes' && enemy.def.category === 'cavalry') {
@@ -565,6 +611,16 @@ class Unit {
     let damageBonus = 1.0;
     if (this.elevationLevel > (target.elevationLevel || 0)) damageBonus *= 1.25;
     if (target.inForest) damageBonus *= 0.60; // 40% tree trunk protection
+
+    // Ambush Strike Surprise Shock (+40% surprise damage, +20 morale shock)
+    if (this.isAmbushing) {
+      damageBonus *= 1.40;
+      target.morale -= 20.0;
+      this.isAmbushing = false;
+      if (particles) {
+        particles.emitFloatingText(this.x, this.y - 25, '¡EMBOSCADA SORPRESA!', '#10b981');
+      }
+    }
 
     if (this.def.category === 'artillery') {
       // Artillery cannonball shot
@@ -668,6 +724,13 @@ class Unit {
       amount *= 0.55;
     }
 
+    // Guard Mode: +25% melee defense (reduces damage taken by 20%) & firm bracing against knockback
+    if (this.guardMode) {
+      amount *= 0.80;
+      this.knockX *= 0.5;
+      this.knockY *= 0.5;
+    }
+
     this.health -= amount;
     this.morale -= amount * 0.25;
     this.losses += Math.round(amount / (this.def.health || 100));
@@ -727,6 +790,11 @@ class Unit {
     if (!this.alive) return;
 
     ctx.save();
+
+    // Ambush Stance: woodland camouflage transparency
+    if (this.isAmbushing) {
+      ctx.globalAlpha = 0.58;
+    }
 
     // Macro Tactical View (Zoom < 0.72): Render Total War / Wargame Division Placard
     if (zoom < 0.72) {
@@ -1199,6 +1267,46 @@ class Unit {
       ctx.setLineDash([4, 3]);
       ctx.strokeRect(-blockDepth * 0.5 - 3, -blockFrontage * 0.5 - 3, blockDepth + 6, blockFrontage + 6);
       ctx.setLineDash([]);
+
+      // Total War Tactical Range Ring & Forward Arc of Fire Cone
+      if (this.range > 0 && !this.meleeStance) {
+        ctx.save();
+        const effRange = this.range * (this.elevationLevel > 0 ? 1.25 : 1.0);
+        const coneHalfAngle = 50 * (Math.PI / 180);
+
+        // Forward Arc of Fire Cone (+/- 50 deg around facing direction +X)
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, effRange, -coneHalfAngle, coneHalfAngle);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([5, 4]);
+        ctx.stroke();
+
+        // Outer Range Perimeter Ring
+        ctx.beginPath();
+        ctx.arc(0, 0, effRange, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
+        ctx.lineWidth = 1.0;
+        ctx.setLineDash([4, 6]);
+        ctx.stroke();
+
+        // Minimum Range Dead Zone (For artillery: barrels cannot depress below 80px)
+        if (this.def.category === 'artillery') {
+          ctx.beginPath();
+          ctx.arc(0, 0, 80, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.08)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)';
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
     }
 
     ctx.restore();
@@ -1239,6 +1347,22 @@ class Unit {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText(this.def.name, this.x, barY - 3);
+
+    // Total War Tactical Status Badges
+    const tacticalBadges = [];
+    if (this.isAmbushing) tacticalBadges.push({ text: '🌿 EMBOSCADA', color: '#10b981' });
+    if (this.guardMode) tacticalBadges.push({ text: '🛡️ GUARDIA', color: '#38bdf8' });
+    if (this.skirmishMode || this.skirmishStance) tacticalBadges.push({ text: '🏃 ESCARAMUZA', color: '#f59e0b' });
+    if (!this.fireAtWill || this.holdFire) tacticalBadges.push({ text: '🚫 ALTO EL FUEGO', color: '#ef4444' });
+    if (this.meleeStance) tacticalBadges.push({ text: '⚔️ MELEE', color: '#ec4899' });
+
+    let badgeOffset = barY - 14 - (this.fatigue >= 50 ? 10 : 0);
+    tacticalBadges.forEach(badge => {
+      ctx.fillStyle = badge.color;
+      ctx.font = 'bold 8px "Outfit", sans-serif';
+      ctx.fillText(badge.text, this.x, badgeOffset);
+      badgeOffset -= 9;
+    });
 
     // Fatigue Indicator (if winded or exhausted)
     if (this.fatigue >= 50) {
