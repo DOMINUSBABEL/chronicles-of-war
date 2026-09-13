@@ -20,6 +20,8 @@ class CampaignManager {
     this.techTree = new TechTreeManager();
     this.battleBridge = new BattleBridge(this);
     this.civBuilder = (typeof CivilizationBuilder !== 'undefined') ? new CivilizationBuilder(this) : null;
+    this.globeView = null;
+    this.is3DGlobe = false;
 
     this.armies = [];
     this.selectedArmy = null;
@@ -106,8 +108,38 @@ class CampaignManager {
     if (rtsHUD) rtsHUD.style.display = isCampaign ? 'none' : 'flex';
     if (modeBadge) modeBadge.innerText = isCampaign ? '🌍 Gran Campaña 4X' : '⚔️ Combate Táctico RTS';
 
+    // Manage 3D Globe visibility when switching modes
+    if (this.globeView && this.globeView.container) {
+      if (!isCampaign && this.is3DGlobe) {
+        this.globeView.container.style.display = 'none';
+        const canvas2D = document.getElementById('game-canvas');
+        if (canvas2D) canvas2D.style.display = 'block';
+      } else if (isCampaign && this.is3DGlobe) {
+        this.globeView.container.style.display = 'block';
+        const canvas2D = document.getElementById('game-canvas');
+        if (canvas2D) canvas2D.style.display = 'none';
+      }
+    }
+
     if (isCampaign) {
       this.refreshUI();
+    }
+  }
+
+  toggleGlobeView() {
+    if (!this.globeView && typeof GlobeView3D !== 'undefined') {
+      this.globeView = new GlobeView3D(this);
+      this.globeView.init('globe-container');
+    }
+    if (!this.globeView) return;
+
+    this.is3DGlobe = !this.is3DGlobe;
+    this.globeView.toggle(this.is3DGlobe);
+
+    const btn = document.getElementById('btn-view-toggle');
+    if (btn) {
+      btn.innerHTML = this.is3DGlobe ? '🗺️ Mapa 2D' : '🌐 Globo 3D';
+      btn.classList.toggle('active', this.is3DGlobe);
     }
   }
 
@@ -491,7 +523,7 @@ class CampaignManager {
     this.armies.forEach(a => a.update(dt));
 
     // Render strategic map and armies
-    this.map.render(ctx, this.armies);
+    this.map.render(ctx, this.armies, this.selectedArmy);
   }
 }
 

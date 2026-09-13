@@ -10,6 +10,7 @@
 
   <!-- Fullscreen Main Game Canvas (Dual Mode: 4X Strategic Map / RTS Tactical Battlefield) -->
   <canvas id="game-canvas"></canvas>
+  <div id="globe-container"></div>
 
   <!-- BAROQUE MAIN MENU SCREEN (Age of Empires III & Total War Aesthetic) -->
   <div id="main-menu-screen" class="menu-overlay">
@@ -90,10 +91,12 @@
       <button id="btn-return-menu" class="btn-return-menu" onclick="returnToMainMenu()">🏛️ Menú</button>
     </div>
 
-    <!-- Mode Switcher Tabs -->
+    <!-- Mode Switcher Tabs & Quick Launch -->
     <div class="mode-tabs">
       <button id="tab-campaign" class="btn-tab active" onclick="switchGameMode('campaign')">🌍 Gran Campaña 4X</button>
       <button id="tab-rts" class="btn-tab" onclick="switchGameMode('rts')">⚔️ Escaramuza RTS</button>
+      <button class="btn-tab btn-quick-launch" onclick="openHistoricalScenariosModal()" title="Abrir catálogo de Escaramuzas Históricas">⚔️ Escenarios</button>
+      <button class="btn-tab btn-quick-launch" onclick="openCustomBattleModal()" title="Abrir Creador de Batallas Personalizadas">🏛️ Creador</button>
     </div>
 
     <!-- CAMPAIGN 4X HUD -->
@@ -197,6 +200,9 @@
       <button id="mm-btn-development" class="btn-mapmode-pill" onclick="setMapModeUI('development')">📈 Desarrollo</button>
       <button id="mm-btn-trade" class="btn-mapmode-pill" onclick="setMapModeUI('trade')">📦 Bienes</button>
       <button id="mm-btn-military" class="btn-mapmode-pill" onclick="setMapModeUI('military')">🛡️ Fortalezas</button>
+    </div>
+    <div class="view-mode-cluster" style="margin-left: 8px; border-left: 1px solid rgba(255,255,255,0.18); padding-left: 8px; display: inline-flex; align-items: center;">
+      <button id="btn-view-toggle" class="btn-mapmode-pill btn-view-toggle" onclick="toggleGlobeViewUI()" title="Alternar proyección entre Mapa Plano 2D y Globo Terráqueo 3D">🌐 Globo 3D</button>
     </div>
   </nav>
 
@@ -737,6 +743,9 @@
     </div>
   </div>
 
+  <!-- 3D Globe Projection Engine (Three.js Offline) -->
+  <script src="lib/three.min.js"></script>
+
   <!-- Game Scripts in Strict Dependency Order -->
   <script src="src/core/audio.js"></script>
   <script src="src/render/smoke_system.js"></script>
@@ -759,6 +768,7 @@
   <script src="src/campaign/campaign_map.js"></script>
   <script src="src/campaign/army_strategic.js"></script>
   <script src="src/campaign/battle_bridge.js"></script>
+  <script src="src/campaign/globe_view_3d.js"></script>
   <script src="src/campaign/campaign_manager.js"></script>
 
   <!-- UI & Networking Extensions -->
@@ -810,6 +820,12 @@
         const btn = document.getElementById(`mm-btn-${m}`);
         if (btn) btn.classList.toggle('active', m === mode);
       });
+    }
+
+    function toggleGlobeViewUI() {
+      if (window.game && window.game.campaign) {
+        window.game.campaign.toggleGlobeView();
+      }
     }
 
     function openP2PModal() {
