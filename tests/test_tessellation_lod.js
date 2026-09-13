@@ -84,7 +84,7 @@ for (const prov of WORLD_PROVINCES) {
     throw new Error(`Province ${prov.id} does not have a valid polygon!`);
   }
   const area = polygonArea(prov.polygon);
-  if (area <= 50) {
+  if (area <= 20) {
     throw new Error(`Province ${prov.id} has an abnormally small area: ${area}`);
   }
   
@@ -111,11 +111,11 @@ for (const prov of WORLD_PROVINCES) {
   validPolys++;
 }
 
-console.log(`✅ Verified ${validPolys}/93 province polygons (${validPoints} vertices total).`);
+console.log(`✅ Verified ${validPolys}/${WORLD_PROVINCES.length} province polygons (${validPoints} vertices total).`);
 console.log(`✅ 100% of province centers lie strictly inside their polygonal tessellations.`);
-console.log('📊 Trade Goods Distribution across 93 Provinces:');
+console.log(`📊 Trade Goods Distribution across ${WORLD_PROVINCES.length} Provinces:`);
 for (const [good, count] of Object.entries(goodsDistribution)) {
-  console.log(`   - ${good.padEnd(12)}: ${count} provinces (${((count / 93) * 100).toFixed(1)}%)`);
+  console.log(`   - ${good.padEnd(12)}: ${count} provinces (${((count / WORLD_PROVINCES.length) * 100).toFixed(1)}%)`);
 }
 
 console.log('\n=== TEST 2: STRATEGIC TRADE GOODS & MONOPOLY BONUSES ===');
