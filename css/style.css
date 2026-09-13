@@ -1611,4 +1611,199 @@ body, html {
   box-shadow: 0 6px 22px rgba(245, 158, 11, 0.5);
 }
 
+/* ==========================================================================
+   BAROQUE TACTICAL COMMAND SUITE & LIVE ANALYTICS DRAWER
+   ========================================================================== */
+
+.btn-tactical-toggle {
+  background: rgba(217, 119, 6, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  color: #fbbf24;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-tactical-toggle:hover,
+.btn-tactical-toggle.active {
+  background: rgba(245, 158, 11, 0.35);
+  border-color: #fbbf24;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.3);
+  transform: translateY(-1px);
+}
+
+.tactical-drawer {
+  position: absolute;
+  top: 84px;
+  left: 16px;
+  right: 16px;
+  z-index: 45;
+  background: rgba(11, 17, 32, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid rgba(212, 175, 55, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 25px rgba(212, 175, 55, 0.15);
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.tactical-drawer.open {
+  max-height: 520px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer-inner {
+  padding: 18px 24px;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drawer-title h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #fbbf24;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.drawer-filigree {
+  font-size: 1.2rem;
+  color: #d4af37;
+}
+
+.btn-drawer-close {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  font-size: 1rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-drawer-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.drawer-content-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.drawer-col {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.drawer-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fbbf24;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 6px;
+}
+
+.drawer-btn-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.btn-drawer-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.btn-drawer-action:hover {
+  background: rgba(51, 65, 85, 0.9);
+  border-color: #fbbf24;
+  transform: translateY(-1px);
+}
+
+.btn-drawer-action .b-icon {
+  font-size: 1.2rem;
+}
+
+.btn-drawer-action strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #f8fafc;
+}
+
+.btn-drawer-action small {
+  display: block;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.drawer-stat-card {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.drawer-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.drawer-stat-row strong {
+  font-size: 13px;
+}
+
+.btn-center-wagon {
+  width: 100%;
+}
+
+
 

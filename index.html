@@ -153,10 +153,127 @@
         <button class="btn-icon" onclick="window.game.setGameSpeed(0.5)">0.5x</button>
         <button class="btn-icon active" onclick="window.game.setGameSpeed(1.0)">1x</button>
         <button class="btn-icon" onclick="window.game.setGameSpeed(2.0)">2x</button>
+        <button id="btn-tactical-drawer-toggle" class="btn-icon btn-tactical-toggle" onclick="window.game.toggleTacticalDrawer()" title="Desplegar Puesto de Mando Táctico">⚜️ Estado Mayor ⏷</button>
         <button id="btn-audio" class="btn-icon" onclick="toggleSoundUI()">🔊</button>
       </div>
     </div>
   </header>
+
+  <!-- TOP SLIDING DRAWER: Baroque Grand Tactical Command Suite -->
+  <section id="tactical-command-drawer" class="glass-panel tactical-drawer">
+    <div class="drawer-inner">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <span class="drawer-filigree">⚜️</span>
+          <h3>ESTADO MAYOR & SUITE TÁCTICA DEL EJÉRCITO</h3>
+          <span class="drawer-filigree">⚜️</span>
+        </div>
+        <button class="btn-drawer-close" onclick="window.game.toggleTacticalDrawer()">✕</button>
+      </div>
+
+      <div class="drawer-content-grid">
+        <!-- 1. Army-Wide Tactical Doctrines -->
+        <div class="drawer-col">
+          <h4 class="drawer-section-title">🛡️ Doctrinas Generales del Frente</h4>
+          <div class="drawer-btn-grid">
+            <button class="btn-drawer-action" onclick="window.game.orderArmyAdvanceInLine()">
+              <span class="b-icon">🛡️</span>
+              <div>
+                <strong>Avanzar en Línea</strong>
+                <small>Despliegue frontal coordinado</small>
+              </div>
+            </button>
+            <button class="btn-drawer-action" onclick="window.game.orderArmyFullCharge()">
+              <span class="b-icon">⚔️</span>
+              <div>
+                <strong>Carga Decisiva</strong>
+                <small>Acometida a la bayoneta / choque</small>
+              </div>
+            </button>
+            <button class="btn-drawer-action" onclick="window.game.orderArmyRetreat()">
+              <span class="b-icon">🚩</span>
+              <div>
+                <strong>Repliegue en Orden</strong>
+                <small>Retirada táctica hacia el convoy</small>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Rules of Engagement (ROE) -->
+        <div class="drawer-col">
+          <h4 class="drawer-section-title">💥 Reglas de Empeñamiento (ROE)</h4>
+          <div class="drawer-btn-grid">
+            <button class="btn-drawer-action" onclick="window.game.setArmyRuleOfEngagement('fire_at_will')">
+              <span class="b-icon">💥</span>
+              <div>
+                <strong>Fuego a Discreción</strong>
+                <small>Salvas libres a máximo alcance</small>
+              </div>
+            </button>
+            <button class="btn-drawer-action" onclick="window.game.setArmyRuleOfEngagement('hold_fire')">
+              <span class="b-icon">🤫</span>
+              <div>
+                <strong>Alto el Fuego</strong>
+                <small>Ahorro de munición / emboscada</small>
+              </div>
+            </button>
+            <button class="btn-drawer-action" onclick="window.game.setArmyRuleOfEngagement('skirmish')">
+              <span class="b-icon">💨</span>
+              <div>
+                <strong>Modo Escaramuza</strong>
+                <small>Mantener distancia del avance rival</small>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Logistics & Supply Control -->
+        <div class="drawer-col">
+          <h4 class="drawer-section-title">📦 Intendencia & Bagajes</h4>
+          <div class="drawer-stat-card">
+            <div class="drawer-stat-row">
+              <span>Suministro Activo:</span>
+              <strong id="drawer-stat-supply" style="color: #22c55e">100%</strong>
+            </div>
+            <div class="drawer-stat-row">
+              <span>Munición en Convoy:</span>
+              <strong id="drawer-stat-wagon-ammo" style="color: #f59e0b">4000 pts</strong>
+            </div>
+            <div class="drawer-stat-row">
+              <span>Fatiga Promedio:</span>
+              <strong id="drawer-stat-fatigue" style="color: #22c55e">0%</strong>
+            </div>
+          </div>
+          <button class="btn-drawer-action btn-center-wagon" onclick="window.game.centerOnSupplyTrain()" style="margin-top: 8px;">
+            <span class="b-icon">🎯</span>
+            <div>
+              <strong>Centrar en Carro de Bagajes</strong>
+              <small>Localizar y ordenar convoy de pólvora</small>
+            </div>
+          </button>
+        </div>
+
+        <!-- 4. Real-time Combat Analytics -->
+        <div class="drawer-col">
+          <h4 class="drawer-section-title">📊 Telemetría de Bajas</h4>
+          <div class="drawer-stat-card">
+            <div class="drawer-stat-row">
+              <span>Bajas Infligidas:</span>
+              <strong id="drawer-stat-kills" style="color: #38bdf8">0</strong>
+            </div>
+            <div class="drawer-stat-row">
+              <span>Pérdidas Propias:</span>
+              <strong id="drawer-stat-losses" style="color: #ef4444">0</strong>
+            </div>
+          </div>
+          <div style="font-size: 10px; color: #94a3b8; margin-top: 8px; line-height: 1.35; padding: 4px;">
+            💡 <em>Los carros de bagajes proyectan un radio logístico de 320px. Selecciona el convoy con clic o lazo y muévelo con clic derecho.</em>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- Left Sidebar: Province Management (4X Campaign) -->
   <aside id="province-inspector-panel" class="left-dock" style="display: none;"></aside>
