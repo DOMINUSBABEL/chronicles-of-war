@@ -34,6 +34,7 @@ class InputController {
 
     this.shiftDown = false;
     this.ctrlDown = false;
+    this.keys = {};
 
     // Mobile / Tablet Touch state (Pinch zoom & pan)
     this.lastTouchDist = 0;
@@ -341,10 +342,10 @@ class InputController {
       return;
     }
 
-    // Zoom on RTS Tactical Battlefield
+    // Zoom on RTS Tactical Battlefield (Allows zooming out to 0.25x for macro division command)
     const cam = this.engine.camera;
     const oldZoom = cam.zoom;
-    cam.zoom = Math.max(0.4, Math.min(2.5, cam.zoom * zoomFactor));
+    cam.zoom = Math.max(0.25, Math.min(2.5, cam.zoom * zoomFactor));
 
     const mouseX = this.mouseScreenX;
     const mouseY = this.mouseScreenY;
@@ -355,6 +356,7 @@ class InputController {
   _onKeyDown(e) {
     if (e.key === 'Shift') this.shiftDown = true;
     if (e.key === 'Control') this.ctrlDown = true;
+    this.keys[e.code] = true;
 
     // Space: Tactical Pause
     if (e.code === 'Space') {
@@ -382,6 +384,54 @@ class InputController {
   _onKeyUp(e) {
     if (e.key === 'Shift') this.shiftDown = false;
     if (e.key === 'Control') this.ctrlDown = false;
+    this.keys[e.code] = false;
+  }
+
+  update(dt) {
+    if (!this.engine) return;
+
+    // Campaign 4X Keyboard Pan
+    if (this.engine.campaign && this.engine.campaign.activeMode === 'campaign') {
+      const cmap = this.engine.campaign.map;
+      if (cmap && !cmap.isTransitioning) {
+        const panSpeed = (this.shiftDown ? 850 : 500) * dt;
+        if (this.keys['KeyW'] || this.keys['ArrowUp']) cmap.camY += panSpeed;
+        if (this.keys['KeyS'] || this.keys['ArrowDown']) cmap.camY -= panSpeed;
+        if (this.keys['KeyA'] || this.keys['ArrowLeft']) cmap.camX += panSpeed;
+        if (this.keys['KeyD'] || this.keys['ArrowRight']) cmap.camX -= panSpeed;
+        cmap.targetCamX = cmap.camX;
+        cmap.targetCamY = cmap.camY;
+      }
+      return;
+    }
+
+    // RTS Tactical Mode Camera Pan (WASD, Arrows & Edge Scrolling)
+    const cam = this.engine.camera;
+    if (!cam) return;
+
+    const panSpeed = (this.shiftDown ? 920 : 540) * dt;
+
+    // 1. Keyboard Controls (WASD / Arrows)
+    if (this.keys['KeyW'] || this.keys['ArrowUp']) cam.y += panSpeed;
+    if (this.keys['KeyS'] || this.keys['ArrowDown']) cam.y -= panSpeed;
+    if (this.keys['KeyA'] || this.keys['ArrowLeft']) cam.x += panSpeed;
+    if (this.keys['KeyD'] || this.keys['ArrowRight']) cam.x -= panSpeed;
+
+    // 2. Edge Scrolling (Mouse near screen borders)
+    const edgeMargin = 22;
+    if (this.mouseScreenX >= 0 && this.mouseScreenX <= edgeMargin) cam.x += panSpeed * 0.8;
+    if (this.mouseScreenX >= this.canvas.width - edgeMargin && this.mouseScreenX <= this.canvas.width) cam.x -= panSpeed * 0.8;
+    if (this.mouseScreenY >= 0 && this.mouseScreenY <= edgeMargin) cam.y += panSpeed * 0.8;
+    if (this.mouseScreenY >= this.canvas.height - edgeMargin && this.mouseScreenY <= this.canvas.height) cam.y -= panSpeed * 0.8;
+
+    // 3. Clamping Camera inside Battlefield Bounds
+    const mapW = (this.engine.tacticalMap && this.engine.tacticalMap.width) ? this.engine.tacticalMap.width : 3200;
+    const mapH = (this.engine.tacticalMap && this.engine.tacticalMap.height) ? this.engine.tacticalMap.height : 2400;
+
+    const minX = -(mapW * cam.zoom - this.canvas.width + 80);
+    const minY = -(mapH * cam.zoom - this.canvas.height + 80);
+    cam.x = Math.max(minX, Math.min(80, cam.x));
+    cam.y = Math.max(minY, Math.min(80, cam.y));
   }
 
   renderOverlays(ctx) {

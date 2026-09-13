@@ -301,6 +301,8 @@ class Unit {
         if (terrain === 'forest') {
           this.inForest = true;
           terrainSpeedMult = (this.def.category === 'cavalry' || this.def.category === 'artillery') ? 0.4 : 0.85;
+        } else if (terrain === 'road') {
+          terrainSpeedMult = 1.35;
         } else if (terrain === 'mud') {
           terrainSpeedMult = 0.55;
         } else if (terrain === 'hill') {
@@ -377,6 +379,12 @@ class Unit {
       // Add movement fatigue
       this.fatigue = Math.min(100, this.fatigue + (this.isCharging ? 4.8 : 1.2) * dt);
 
+      // Clamping inside battlefield perimeter (Prevents units from escaping map)
+      const mapW = (map && map.width) ? map.width : 3200;
+      const mapH = (map && map.height) ? map.height : 2400;
+      this.x = Math.max(20, Math.min(mapW - 20, this.x));
+      this.y = Math.max(20, Math.min(mapH - 20, this.y));
+
       // When moving, target facing aligns with direction of travel
       this.targetAngle = moveAngle;
 
@@ -409,25 +417,28 @@ class Unit {
 
         this._resolveMeleeCombat(nearestEnemy, dt, particles, audio);
       }
-      // Ranged Combat
-      else if (this.range > 0 && distToEnemy <= this.range && !isMoving) {
-        // Skirmish mode: if enemy is closing in (< 45% range), back away while firing
-        if (this.skirmishStance && distToEnemy < this.range * 0.45) {
-          const retreatAngle = Math.atan2(this.y - nearestEnemy.y, this.x - nearestEnemy.x);
-          this.targetX = this.x + Math.cos(retreatAngle) * 70;
-          this.targetY = this.y + Math.sin(retreatAngle) * 70;
-        }
+      // Ranged Combat (Elevation grants +25% range)
+      else if (this.range > 0 && !isMoving) {
+        const effectiveRange = this.range * (this.elevationLevel > 0 ? 1.25 : 1.0);
+        if (distToEnemy <= effectiveRange) {
+          // Skirmish mode: if enemy is closing in (< 45% range), back away while firing
+          if (this.skirmishStance && distToEnemy < this.range * 0.45) {
+            const retreatAngle = Math.atan2(this.y - nearestEnemy.y, this.x - nearestEnemy.x);
+            this.targetX = this.x + Math.cos(retreatAngle) * 70;
+            this.targetY = this.y + Math.sin(retreatAngle) * 70;
+          }
 
-        const combatAngleDiff = Math.atan2(Math.sin(enemyAngle - this.angle), Math.cos(enemyAngle - this.angle));
-        this.angle += combatAngleDiff * Math.min(1.0, 5.0 * dt);
+          const combatAngleDiff = Math.atan2(Math.sin(enemyAngle - this.angle), Math.cos(enemyAngle - this.angle));
+          this.angle += combatAngleDiff * Math.min(1.0, 5.0 * dt);
 
-        // Fire only if hold fire is not active
-        if (!this.holdFire) {
-          const reloadFactor = this.fatigue >= 75 ? 1.5 : (this.fatigue >= 50 ? 1.2 : 1.0);
-          this.reloadTimer -= dt;
-          if (this.reloadTimer <= 0) {
-            this._fireRangedVolley(nearestEnemy, ballistics, particles, audio);
-            this.reloadTimer = (this.reloadTime * reloadFactor) + (Math.random() - 0.5) * 0.6;
+          // Fire only if hold fire is not active
+          if (!this.holdFire) {
+            const reloadFactor = this.fatigue >= 75 ? 1.5 : (this.fatigue >= 50 ? 1.2 : 1.0);
+            this.reloadTimer -= dt;
+            if (this.reloadTimer <= 0) {
+              this._fireRangedVolley(nearestEnemy, ballistics, particles, audio);
+              this.reloadTimer = (this.reloadTime * reloadFactor) + (Math.random() - 0.5) * 0.6;
+            }
           }
         }
       }
@@ -494,6 +505,16 @@ class Unit {
     // Enemy in square formation resists cavalry
     if (enemy.activeDoctrine === 'square' && this.def.category === 'cavalry') {
       damageFactor *= 0.40;
+    }
+
+    // Topography Melee Modifiers (Hill elevation & River crossing)
+    if (this.elevationLevel > (enemy.elevationLevel || 0)) {
+      damageFactor *= 1.20; // +20% damage fighting downhill
+    } else if (this.elevationLevel < (enemy.elevationLevel || 0)) {
+      damageFactor *= 0.75; // -25% damage fighting uphill
+    }
+    if (this.isWater) {
+      damageFactor *= 0.70; // -30% fighting efficiency while wading in river
     }
 
     const dps = damageFactor * 1.8;
@@ -687,7 +708,11 @@ class Unit {
 
   receiveProjectileHit(projectile, particles, audio) {
     if (!this.alive) return false;
-    const armor = this.def.armor || 0;
+    let armor = this.def.armor || 0;
+    // Forest tree trunks provide +40% missile defense against bullets/arrows
+    if (this.inForest) {
+      armor = Math.min(0.85, armor + 0.40);
+    }
     const finalDamage = projectile.damage * (1.0 - armor);
     this.receiveDamage(finalDamage, projectile.owner, particles, audio);
     if (particles) {
@@ -698,10 +723,17 @@ class Unit {
 
   // --- RENDERING ---
 
-  render(ctx) {
+  render(ctx, zoom = 1.0) {
     if (!this.alive) return;
 
     ctx.save();
+
+    // Macro Tactical View (Zoom < 0.72): Render Total War / Wargame Division Placard
+    if (zoom < 0.72) {
+      this._renderDivisionBanner(ctx);
+      ctx.restore();
+      return;
+    }
 
     // 1. Render Micro-Soldiers
     for (let i = 0; i < this.soldiers.length; i++) {
@@ -715,6 +747,82 @@ class Unit {
 
     // 3. Render Health & Morale Gauges
     this._renderHealthAndMorale(ctx);
+
+    ctx.restore();
+  }
+
+  _renderDivisionBanner(ctx) {
+    ctx.save();
+    ctx.translate(this.x + this.shakeX, this.y + this.shakeY);
+
+    const bannerW = 54;
+    const bannerH = 22;
+    const bX = -bannerW * 0.5;
+    const bY = -bannerH * 0.5;
+
+    // Outer glow if selected
+    if (this.selected) {
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 10;
+    }
+
+    // Card background
+    ctx.fillStyle = this.isRouting ? '#475569' : (this.team === 0 ? 'rgba(30, 58, 138, 0.94)' : 'rgba(153, 27, 27, 0.94)');
+    ctx.strokeStyle = this.selected ? '#fbbf24' : (this.team === 0 ? '#60a5fa' : '#f87171');
+    ctx.lineWidth = this.selected ? 2.0 : 1.2;
+
+    ctx.beginPath();
+    ctx.roundRect(bX, bY, bannerW, bannerH, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+
+    // Unit Category Icon
+    const catIcons = {
+      pikes: '🛡️',
+      melee: '⚔️',
+      ranged: '💥',
+      cavalry: '🏇',
+      artillery: '💣'
+    };
+    const icon = catIcons[this.def.category] || '⚔️';
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(icon, bX + 4, 0);
+
+    // Soldier count
+    ctx.fillStyle = this.selected ? '#fbbf24' : '#f8fafc';
+    ctx.font = 'bold 9px "Outfit", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.currentSoldiers.toString(), bX + bannerW - 4, 0);
+
+    // Facing Direction Arrow (Pointed in unit's facing direction)
+    const arrowLen = 14;
+    ctx.strokeStyle = this.selected ? '#fbbf24' : '#f8fafc';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(this.angle) * arrowLen, Math.sin(this.angle) * arrowLen);
+    ctx.stroke();
+
+    // Mini Health & Morale Bars beneath banner
+    const hpPct = Math.max(0, this.health / this.maxHealth);
+    const morPct = Math.max(0, this.morale / 100);
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(bX, bY + bannerH + 2, bannerW, 2.5);
+    ctx.fillStyle = '#10b981';
+    ctx.fillRect(bX, bY + bannerH + 2, bannerW * hpPct, 2.5);
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(bX, bY + bannerH + 5.5, bannerW, 2);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(bX, bY + bannerH + 5.5, bannerW * morPct, 2);
 
     ctx.restore();
   }

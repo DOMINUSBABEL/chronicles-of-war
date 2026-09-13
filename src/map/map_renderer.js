@@ -4,7 +4,7 @@
  */
 
 class TacticalMap {
-  constructor(width = 1600, height = 1200) {
+  constructor(width = 3200, height = 2400) {
     this.width = width;
     this.height = height;
     this.terrainCanvas = null;
@@ -22,13 +22,20 @@ class TacticalMap {
   }
 
   _initOffscreenCanvas() {
-    this.terrainCanvas = document.createElement('canvas');
-    this.terrainCanvas.width = this.width;
-    this.terrainCanvas.height = this.height;
-    this.terrainCtx = this.terrainCanvas.getContext('2d');
+    if (typeof document !== 'undefined') {
+      this.terrainCanvas = document.createElement('canvas');
+      this.terrainCanvas.width = this.width;
+      this.terrainCanvas.height = this.height;
+      this.terrainCtx = this.terrainCanvas.getContext('2d');
+    }
   }
 
   loadScenarioData(data) {
+    if (data.width && data.height) {
+      this.width = data.width;
+      this.height = data.height;
+      this._initOffscreenCanvas();
+    }
     this.fortifications = data.fortifications || [];
     this.forests = data.forests || [];
     this.rivers = data.rivers || [];

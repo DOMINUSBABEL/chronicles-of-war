@@ -89,7 +89,12 @@ class GameEngine {
     this.battlefieldCasualties = [];
     this.nextUnitId = 1;
 
-    // Load Map data
+    // Load Map data & dynamically set tactical map dimensions
+    const mapW = scenario.mapWidth || 3200;
+    const mapH = scenario.mapHeight || 2400;
+    this.tacticalMap.width = mapW;
+    this.tacticalMap.height = mapH;
+    this.tacticalMap._initOffscreenCanvas();
     this.tacticalMap.loadScenarioData(scenario.mapData);
 
     // Initialize Supply Trains & Capture Points for this battlefield
@@ -119,8 +124,10 @@ class GameEngine {
 
   _centerCameraOnScenario() {
     this.camera.zoom = 0.85;
-    this.camera.x = (this.canvas.width - 1600 * this.camera.zoom) * 0.5;
-    this.camera.y = (this.canvas.height - 1100 * this.camera.zoom) * 0.5;
+    const mapW = (this.tacticalMap && this.tacticalMap.width) ? this.tacticalMap.width : 1600;
+    const mapH = (this.tacticalMap && this.tacticalMap.height) ? this.tacticalMap.height : 1100;
+    this.camera.x = (this.canvas.width - mapW * this.camera.zoom) * 0.5;
+    this.camera.y = (this.canvas.height - mapH * this.camera.zoom) * 0.5;
   }
 
   togglePause() {
@@ -384,6 +391,11 @@ class GameEngine {
       const rawDt = Math.min(0.1, (timestamp - this.lastTime) / 1000);
       this.lastTime = timestamp;
 
+      // Update Input Controller (Keyboard WASD, Edge Scrolling, Camera Navigation)
+      if (this.input && typeof this.input.update === 'function') {
+        this.input.update(rawDt);
+      }
+
       if (this.campaign && this.campaign.activeMode === 'campaign') {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.campaign.render(this.ctx);
@@ -468,8 +480,8 @@ class GameEngine {
       this.supplySystem.render(ctx);
     }
 
-    // Layer 4: Units & Micro-Soldiers
-    this.units.forEach(u => u.render(ctx));
+    // Layer 4: Units & Micro-Soldiers (Pass cam.zoom for Macro Division Banner LOD)
+    this.units.forEach(u => u.render(ctx, cam.zoom));
 
     // Layer 5: Ballistics (Arrows, Bullets, Cannonballs)
     this.ballistics.render(ctx);
@@ -488,6 +500,9 @@ class GameEngine {
 
   _renderMinimap(ctx) {
     const mmSize = 180;
+    const mapW = (this.tacticalMap && this.tacticalMap.width) ? this.tacticalMap.width : 3200;
+    const mapH = (this.tacticalMap && this.tacticalMap.height) ? this.tacticalMap.height : 2400;
+    const mmHeight = mmSize * (mapH / mapW);
     const mmX = this.canvas.width - mmSize - 20;
     const mmY = 20;
 
@@ -495,11 +510,11 @@ class GameEngine {
     ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.lineWidth = 1.5;
-    ctx.fillRect(mmX, mmY, mmSize, mmSize * (1100 / 1600));
-    ctx.strokeRect(mmX, mmY, mmSize, mmSize * (1100 / 1600));
+    ctx.fillRect(mmX, mmY, mmSize, mmHeight);
+    ctx.strokeRect(mmX, mmY, mmSize, mmHeight);
 
-    const scaleX = mmSize / 1600;
-    const scaleY = (mmSize * (1100 / 1600)) / 1100;
+    const scaleX = mmSize / mapW;
+    const scaleY = mmHeight / mapH;
 
     // Fortifications on minimap
     ctx.fillStyle = '#475569';
