@@ -211,20 +211,43 @@ class CampaignManager {
     const panel = document.getElementById('province-inspector-panel');
     if (!panel) return;
 
-    const fac = FACTIONS[province.owner];
+    const fac = FACTIONS[province.owner] || FACTIONS.neutral || {
+      name: 'Neutral', banner: '🏕️', colors: { primary: '#64748b' }
+    };
     const isPlayer = province.owner === this.playerFaction;
+    const isNeutral = province.owner === 'neutral' || province.isColonizable;
     const yields = province.calculateYield();
 
+    // Cost calculations for administrative buttons
+    const econCost = 120 + Math.round((province.economyValue || 25) * 1.8);
+    const devCostGold = 140 + (province.developmentLevel || 1) * 50;
+    const devCostSci = 25 + (province.developmentLevel || 1) * 15;
+    const infraCostGold = 130 + (province.infrastructureLevel || 1) * 45;
+    const infraCostIron = 35 + (province.infrastructureLevel || 1) * 25;
+    const defCostGold = 160 + (province.defenseLevel || 1) * 60;
+    const defCostIron = 60 + (province.defenseLevel || 1) * 30;
+
     panel.innerHTML = `
-      <div class="province-card glass-panel">
-        <div class="prov-header" style="border-bottom: 2px solid ${fac.colors.primary}">
-          <span class="prov-flag">${fac.banner}</span>
+      <div class="province-card glass-panel" style="border-top: 3px solid ${fac.colors.primary || '#d97706'}">
+        <div class="prov-header">
+          <span class="prov-flag" style="font-size: 1.6rem;">${fac.banner}</span>
           <div>
-            <h3>${province.capitalName}</h3>
-            <span class="prov-region">${province.name} (${fac.name})</span>
+            <h3 style="font-family:'Outfit',sans-serif; margin:0; font-size:1.15rem; color:#f8fafc;">${province.capitalName}</h3>
+            <span class="prov-region" style="font-size:0.8rem; color:#94a3b8;">${province.name} • <strong>${fac.name}</strong> [${province.theater}]</span>
           </div>
         </div>
 
+        <!-- Age of History 3 Provincial Metrics -->
+        <div class="aoh3-metrics-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin: 10px 0; background:rgba(0,0,0,0.35); padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.06);">
+          <div style="font-size:11px;">👥 Población: <strong style="color:#f8fafc">${(province.population || 50000).toLocaleString()}</strong></div>
+          <div style="font-size:11px;">⭐ Desarrollo: <strong style="color:#fbbf24">Nv. ${province.developmentLevel || 1} / 10</strong></div>
+          <div style="font-size:11px;">🪙 Valor Fiscal: <strong style="color:#38bdf8">${province.economyValue || 25}</strong></div>
+          <div style="font-size:11px;">🛣️ Infraestructura: <strong style="color:#a78bfa">Nv. ${province.infrastructureLevel || 1} / 5</strong></div>
+          <div style="font-size:11px;">🛡️ Baluartes: <strong style="color:#34d399">Nv. ${province.defenseLevel || 1} / 4</strong></div>
+          <div style="font-size:11px;">🗺️ Terreno: <strong style="color:#cbd5e1">${province.terrain.toUpperCase()}</strong></div>
+        </div>
+
+        <!-- Yield Grid -->
         <div class="yield-grid">
           <div class="yield-box">🪙 Oro: <strong>+${yields.gold}</strong></div>
           <div class="yield-box">🌾 Alimento: <strong>+${yields.food}</strong></div>
@@ -232,32 +255,139 @@ class CampaignManager {
           <div class="yield-box">📜 Ciencia: <strong>+${yields.science}</strong></div>
         </div>
 
-        <div class="buildings-section">
-          <h4>Infraestructura:</h4>
-          <div class="building-badges">
-            ${province.buildings.map(b => `<span class="badge-bld">🏛️ ${b.toUpperCase()}</span>`).join('')}
-          </div>
-        </div>
-
+        <!-- Age of History 3 Administrative Investments -->
         ${isPlayer ? `
-          <div class="prov-actions">
-            <button class="btn-action" onclick="window.game.campaign.buildInfrastructure('${province.id}', 'farm')">🌾 Granja (150 O)</button>
-            <button class="btn-action" onclick="window.game.campaign.buildInfrastructure('${province.id}', 'mine')">⛏️ Mina (200 O)</button>
-            <button class="btn-action" onclick="window.game.campaign.buildInfrastructure('${province.id}', 'star_bastion')">🏰 Baluarte (350 O)</button>
-            <button class="btn-action" onclick="window.game.campaign.buildInfrastructure('${province.id}', 'university')">📜 Universidad (300 O)</button>
+          <div class="admin-investment-section" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+            <h4 style="font-size:11px; color:#fbbf24; text-transform:uppercase; margin-bottom:6px; font-weight:700;">🏛️ Administración Provincial (AoH3):</h4>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+              <button class="btn-action" style="text-align:left; padding:5px 8px; font-size:11px;" onclick="window.game.campaign.adminInvestEconomy('${province.id}')">
+                🪙 Invertir en Economía (+15 Base) <small style="color:#94a3b8">(${econCost} Oro)</small>
+              </button>
+              <button class="btn-action" style="text-align:left; padding:5px 8px; font-size:11px;" onclick="window.game.campaign.adminInvestDevelopment('${province.id}')">
+                🌱 Invertir en Desarrollo (+1 Nivel) <small style="color:#94a3b8">(${devCostGold} Oro, ${devCostSci} Ci)</small>
+              </button>
+              <button class="btn-action" style="text-align:left; padding:5px 8px; font-size:11px;" onclick="window.game.campaign.adminInvestInfrastructure('${province.id}')">
+                ⛏️ Mejorar Caminos y Red (+1 Nivel) <small style="color:#94a3b8">(${infraCostGold} Oro, ${infraCostIron} H)</small>
+              </button>
+              <button class="btn-action" style="text-align:left; padding:5px 8px; font-size:11px;" onclick="window.game.campaign.adminInvestDefense('${province.id}')">
+                🛡️ Fortificar Baluarte (+1 Nivel) <small style="color:#94a3b8">(${defCostGold} Oro, ${defCostIron} H)</small>
+              </button>
+            </div>
           </div>
-          <div class="recruit-sec">
-            <h4>Levas en esta Provincia:</h4>
+
+          <div class="buildings-section" style="margin-top: 8px;">
+            <h4 style="font-size:11px; color:#cbd5e1; margin-bottom:4px;">Edificios Erigidos:</h4>
+            <div class="building-badges">
+              ${province.buildings.map(b => `<span class="badge-bld">🏛️ ${b.toUpperCase()}</span>`).join('')}
+            </div>
+            <div class="prov-actions" style="margin-top:6px;">
+              <button class="btn-action" onclick="window.game.campaign.buildInfrastructure('${province.id}', 'farm')">🌾 Granja (150 O)</button>
+              <button class="btn-action" onclick="window.game.campaign.buildInfrastructure('${province.id}', 'mine')">⛏️ Mina (200 O)</button>
+              <button class="btn-action" onclick="window.game.campaign.buildInfrastructure('${province.id}', 'university')">📜 Universidad (300 O)</button>
+            </div>
+          </div>
+
+          <div class="recruit-sec" style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
+            <h4 style="font-size:11px; color:#cbd5e1; margin-bottom:4px;">Levas Provinciales:</h4>
             <button class="btn-action btn-recruit-prov" onclick="window.game.campaign.recruitIntoLocalArmy('${province.id}', 'tercio')">🚩 Tercio (280 O, 50 H)</button>
             <button class="btn-action btn-recruit-prov" onclick="window.game.campaign.recruitIntoLocalArmy('${province.id}', 'arquebusiers')">💥 Arcabuceros (180 O)</button>
           </div>
+        ` : (isNeutral ? `
+          <div class="colonial-annex-section" style="margin-top:10px; background:rgba(30,58,138,0.25); border:1px solid rgba(59,130,246,0.3); padding:10px; border-radius:8px;">
+            <h4 style="color:#38bdf8; font-size:12px; margin-bottom:6px;">🏕️ Territorio de Frontera Sin Soberanía Formal</h4>
+            <p style="font-size:11px; color:#cbd5e1; margin-bottom:8px; line-height:1.4;">
+              Esta provincia no pertenece a ninguna corona. Puedes colonizarla o invertir en su desarrollo inicial para anexarla a tus dominios.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+              <button class="btn-action" style="background:#0284c7; color:#fff;" onclick="window.game.campaign.adminColonize('${province.id}')">
+                ⛵ Enviar Expedición Colonial (180 Oro, 90 Alimento)
+              </button>
+              <button class="btn-action" onclick="window.game.campaign.adminInvestDevelopment('${province.id}')">
+                🌱 Invertir en Desarrollo & Anexar (${devCostGold} Oro, ${devCostSci} Ciencia)
+              </button>
+            </div>
+          </div>
         ` : `
-          <div class="enemy-prov-notice">Provincia bajo dominio extranjero.</div>
-        `}
+          <div class="enemy-prov-notice" style="margin-top:10px; padding:10px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); border-radius:8px;">
+            <strong style="color:#ef4444">⚔️ Provincia Soberana Extranjera</strong>
+            <p style="font-size:11px; color:#cbd5e1; margin-top:4px;">Territorio bajo control de ${fac.name}. Mueve un ejército aquí para asediar su guarnición o conquistar la plaza fuerte.</p>
+          </div>
+        `)}
       </div>
     `;
 
     panel.style.display = 'block';
+  }
+
+  // Administrative Actions
+  adminInvestEconomy(provinceId) {
+    const province = this.map.getProvinceById(provinceId);
+    if (!province) return;
+    const res = this.economy.investEconomy(this.playerFaction, province);
+    if (res.success) {
+      if (this.game.sound) this.game.sound.playMarchDrums();
+      this.game.addLogMessage(res.message);
+      this._showProvincePanel(province);
+      this.refreshUI();
+    } else {
+      this.game.addLogMessage(`⚠️ ${res.reason}`);
+    }
+  }
+
+  adminInvestDevelopment(provinceId) {
+    const province = this.map.getProvinceById(provinceId);
+    if (!province) return;
+    const res = this.economy.investDevelopment(this.playerFaction, province);
+    if (res.success) {
+      if (this.game.sound) this.game.sound.playTrumpetCall();
+      this.game.addLogMessage(res.message);
+      this._showProvincePanel(province);
+      this.refreshUI();
+    } else {
+      this.game.addLogMessage(`⚠️ ${res.reason}`);
+    }
+  }
+
+  adminInvestInfrastructure(provinceId) {
+    const province = this.map.getProvinceById(provinceId);
+    if (!province) return;
+    const res = this.economy.investInfrastructure(this.playerFaction, province);
+    if (res.success) {
+      if (this.game.sound) this.game.sound.playMarchDrums();
+      this.game.addLogMessage(res.message);
+      this._showProvincePanel(province);
+      this.refreshUI();
+    } else {
+      this.game.addLogMessage(`⚠️ ${res.reason}`);
+    }
+  }
+
+  adminInvestDefense(provinceId) {
+    const province = this.map.getProvinceById(provinceId);
+    if (!province) return;
+    const res = this.economy.investDefense(this.playerFaction, province);
+    if (res.success) {
+      if (this.game.sound) this.game.sound.playMarchDrums();
+      this.game.addLogMessage(res.message);
+      this._showProvincePanel(province);
+      this.refreshUI();
+    } else {
+      this.game.addLogMessage(`⚠️ ${res.reason}`);
+    }
+  }
+
+  adminColonize(provinceId) {
+    const province = this.map.getProvinceById(provinceId);
+    if (!province) return;
+    const res = this.economy.colonizeProvince(this.playerFaction, province);
+    if (res.success) {
+      if (this.game.sound) this.game.sound.playTrumpetCall();
+      this.game.addLogMessage(res.message);
+      this._showProvincePanel(province);
+      this.refreshUI();
+    } else {
+      this.game.addLogMessage(`⚠️ ${res.reason}`);
+    }
   }
 
   buildInfrastructure(provinceId, buildingType) {

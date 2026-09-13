@@ -140,6 +140,119 @@ class EconomyManager {
 
     return turnReports;
   }
+
+  // --- AGE OF HISTORY 3 ADMINISTRATIVE INVESTMENTS ---
+
+  investEconomy(factionId, province) {
+    const cost = { gold: 120 + Math.round(province.economyValue * 1.8) };
+    if (!this.canAfford(factionId, cost)) {
+      return { success: false, reason: `Oro insuficiente (requiere ${cost.gold} Oro)` };
+    }
+
+    this.spendResources(factionId, cost);
+    province.economyValue += 15;
+    return { 
+      success: true, 
+      message: `🪙 Inversión económica completada en ${province.name}. Nuevo valor fiscal: ${province.economyValue}.` 
+    };
+  }
+
+  investDevelopment(factionId, province) {
+    if (province.developmentLevel >= 10) {
+      return { success: false, reason: 'Nivel máximo de desarrollo alcanzado (10/10).' };
+    }
+
+    const cost = { 
+      gold: 140 + province.developmentLevel * 50, 
+      science: 25 + province.developmentLevel * 15 
+    };
+    if (!this.canAfford(factionId, cost)) {
+      return { success: false, reason: `Fondos insuficientes (requiere ${cost.gold} Oro, ${cost.science} Ciencia)` };
+    }
+
+    this.spendResources(factionId, cost);
+    province.developmentLevel = Math.min(10, province.developmentLevel + 1);
+    province.population = Math.round(province.population * 1.15);
+
+    // If it was neutral wilderness, investing in its development incorporates it!
+    if (province.owner === 'neutral') {
+      province.owner = factionId;
+      province.isColonizable = false;
+      return {
+        success: true,
+        message: `🌱 ¡Territorio incorporado a la Corona! ${province.name} ascendió a Nivel ${province.developmentLevel} de Desarrollo.`
+      };
+    }
+
+    return { 
+      success: true, 
+      message: `🌱 Desarrollo provincial elevado a Nivel ${province.developmentLevel} en ${province.name}. Crecimiento demográfico acelerado.` 
+    };
+  }
+
+  investInfrastructure(factionId, province) {
+    if (province.infrastructureLevel >= 5) {
+      return { success: false, reason: 'Red de infraestructura máxima alcanzada (5/5).' };
+    }
+
+    const cost = { 
+      gold: 130 + province.infrastructureLevel * 45, 
+      iron: 35 + province.infrastructureLevel * 25 
+    };
+    if (!this.canAfford(factionId, cost)) {
+      return { success: false, reason: `Recursos insuficientes (requiere ${cost.gold} Oro, ${cost.iron} Hierro)` };
+    }
+
+    this.spendResources(factionId, cost);
+    province.infrastructureLevel = Math.min(5, province.infrastructureLevel + 1);
+    return { 
+      success: true, 
+      message: `⛏️ Red vial, puentes y mercados elevados a Nivel ${province.infrastructureLevel} en ${province.name}.` 
+    };
+  }
+
+  investDefense(factionId, province) {
+    if (province.defenseLevel >= 4) {
+      return { success: false, reason: 'Fortificación baluarte máxima erigida (4/4).' };
+    }
+
+    const cost = { 
+      gold: 160 + province.defenseLevel * 60, 
+      iron: 60 + province.defenseLevel * 30 
+    };
+    if (!this.canAfford(factionId, cost)) {
+      return { success: false, reason: `Recursos insuficientes (requiere ${cost.gold} Oro, ${cost.iron} Hierro)` };
+    }
+
+    this.spendResources(factionId, cost);
+    province.defenseLevel = Math.min(4, province.defenseLevel + 1);
+    province.addBuilding('star_bastion');
+    return { 
+      success: true, 
+      message: `🛡️ Baluarte y defensas fortificadas a Nivel ${province.defenseLevel} en ${province.name}.` 
+    };
+  }
+
+  colonizeProvince(factionId, province) {
+    if (province.owner !== 'neutral' && !province.isColonizable) {
+      return { success: false, reason: 'Esta provincia ya posee soberanía formal.' };
+    }
+
+    const cost = { gold: 180, food: 90 };
+    if (!this.canAfford(factionId, cost)) {
+      return { success: false, reason: `Requiere ${cost.gold} Oro y ${cost.food} Alimento para enviar la expedición colonial.` };
+    }
+
+    this.spendResources(factionId, cost);
+    province.owner = factionId;
+    province.isColonizable = false;
+    province.developmentLevel = Math.max(2, province.developmentLevel);
+    province.population = Math.round(province.population * 1.25);
+    return { 
+      success: true, 
+      message: `⛵ ¡Expedición colonial exitosa! ${province.name} ha sido anexada a la soberanía de la Corona.` 
+    };
+  }
 }
 
 window.EconomyManager = EconomyManager;
