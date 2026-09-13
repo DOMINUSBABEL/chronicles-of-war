@@ -153,6 +153,59 @@ class EconomyManager {
     return turnReports;
   }
 
+  getProjectedIncome(factionId, provinces, armies) {
+    if (!provinces || !armies) return { gold: 0, food: 0, iron: 0, science: 0 };
+    let incomeGold = 0;
+    let incomeFood = 0;
+    let incomeIron = 0;
+    let incomeScience = 0;
+    let armyUpkeepGold = 0;
+    let armyUpkeepFood = 0;
+
+    const taxMod = this.getTaxMultiplier(factionId);
+    const uniqueTradeGoods = new Set();
+
+    provinces.forEach(p => {
+      if (p.owner === factionId) {
+        const pYield = p.calculateYield();
+        incomeGold += pYield.gold * taxMod.income;
+        incomeFood += pYield.food;
+        incomeIron += pYield.iron;
+        incomeScience += pYield.science;
+        if (p.tradeGood) uniqueTradeGoods.add(p.tradeGood);
+
+        if (factionId === 'spain' && p.hasPort) incomeGold += 60;
+        if (factionId === 'france' && p.terrain === 'plains') incomeFood += 80;
+        if (factionId === 'germany' && p.terrain === 'mountains') incomeIron += 70;
+        if (factionId === 'britain' && p.hasPort) incomeGold += 50;
+      }
+    });
+
+    if (uniqueTradeGoods.size >= 4) {
+      incomeGold += Math.round(incomeGold * 0.18);
+    }
+
+    armies.forEach(a => {
+      if (a.faction === factionId && a.isAlive) {
+        const currentProv = provinces.find(p => p.id === a.provinceId);
+        const isForeignSoil = currentProv && currentProv.owner !== factionId;
+        const logisticsMultiplier = isForeignSoil ? 1.35 : 1.0;
+
+        a.regiments.forEach(reg => {
+          armyUpkeepGold += (reg.cost || 200) * 0.08 * logisticsMultiplier;
+          armyUpkeepFood += 15 * logisticsMultiplier;
+        });
+      }
+    });
+
+    return {
+      gold: Math.round(incomeGold - armyUpkeepGold),
+      food: Math.round(incomeFood - armyUpkeepFood),
+      iron: Math.round(incomeIron),
+      science: Math.round(incomeScience)
+    };
+  }
+
   // --- AGE OF HISTORY 3 ADMINISTRATIVE INVESTMENTS ---
 
   investEconomy(factionId, province) {

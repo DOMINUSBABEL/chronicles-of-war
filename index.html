@@ -126,100 +126,103 @@
 
   <!-- Top Commander's Campaign Desk Navigation Bar (Puesto de Mando Imperial) -->
   <header class="top-bar campaign-desk">
-    <div class="logo-area">
+    <!-- Left Wing: Sovereign Monogram, Faction Badge & Headquarters -->
+    <div class="top-bar-left">
+      <span class="game-monogram-seal" title="Chronicles of War • Empires of Steel & Powder">⚜️</span>
       <div class="game-title">CHRONICLES OF WAR</div>
-      <div id="mode-indicator" class="era-badge">🌍 Gran Campaña 4X</div>
-      <button id="btn-return-menu" class="btn-return-menu" onclick="returnToMainMenu()">🏛️ Cuartel General</button>
+      <div id="mode-indicator" class="sovereign-banner-pill" onclick="openCivBuilderModal()" title="Corona Soberana • Haz clic para abrir el Forjador de Civilizaciones">
+        <span class="pill-banner">🚩</span>
+        <span class="pill-name">Imperio Español</span>
+      </div>
+      <button id="btn-return-menu" class="btn-return-menu" onclick="returnToMainMenu()" title="Volver al Menú Principal / Cuartel General">
+        <span class="btn-icon">🏛️</span><span class="btn-menu-label"> Cuartel</span>
+      </button>
     </div>
 
-    <!-- Mode Switcher Tabs & Quick Launch -->
-    <div class="mode-tabs">
-      <button id="tab-campaign" class="btn-tab active" onclick="switchGameMode('campaign')">🌍 Gran Campaña 4X</button>
-      <button id="tab-rts" class="btn-tab" onclick="switchGameMode('rts')">⚔️ Escaramuza RTS</button>
-      <button class="btn-tab btn-quick-launch" onclick="openHistoricalScenariosModal()" title="Abrir catálogo de Escaramuzas Históricas">⚔️ Escenarios</button>
-      <button class="btn-tab btn-quick-launch" onclick="openCustomBattleModal()" title="Abrir Creador de Batallas Personalizadas">🏛️ Creador</button>
+    <!-- Center Wing: Campaign Imperial Treasury OR Tactical Battle Telemetry -->
+    <div class="top-bar-center">
+      <!-- 4X CAMPAIGN TREASURY -->
+      <div id="campaign-hud" class="campaign-hud-group">
+        <div class="imperial-treasury-pill" id="camp-treasury-pill">
+          <div class="treasury-item" title="Tesoro Imperial. Obtenido por aduanas, impuestos y comercio.">
+            <span class="res-icon">🪙</span>
+            <span id="camp-gold" class="res-val" style="color: #fbbf24;">1200</span>
+            <span id="camp-gold-delta" class="res-delta" style="color: #86efac;">(+213)</span>
+          </div>
+          <div class="treasury-divider"></div>
+          <div class="treasury-item" title="Graneros y Cosechas. Sostiene al pueblo y mantiene a los ejércitos.">
+            <span class="res-icon">🌾</span>
+            <span id="camp-food" class="res-val" style="color: #86efac;">800</span>
+            <span id="camp-food-delta" class="res-delta" style="color: #86efac;">(+167)</span>
+          </div>
+          <div class="treasury-divider"></div>
+          <div class="treasury-item" title="Hierro de fundición. Vital para forjar armaduras y fundir cañones.">
+            <span class="res-icon">⛏️</span>
+            <span id="camp-iron" class="res-val" style="color: #cbd5e1;">500</span>
+            <span id="camp-iron-delta" class="res-delta" style="color: #86efac;">(+42)</span>
+          </div>
+          <div class="treasury-divider"></div>
+          <div class="treasury-item" title="Ciencia y Tratados. Desarrolla avances en academias e investigaciones.">
+            <span class="res-icon">📜</span>
+            <span id="camp-science" class="res-val" style="color: #93c5fd;">100</span>
+            <span id="camp-sci-delta" class="res-delta" style="color: #86efac;">(+26)</span>
+          </div>
+        </div>
+        <button id="camp-epoch" class="btn-epoch" onclick="openTechTreeModal()" title="Árbol de Épocas & Desarrollo Histórico">⚜️ Época III: Renacimiento</button>
+      </div>
+
+      <!-- RTS TACTICAL HUD (Hidden in Campaign mode) -->
+      <div id="rts-hud" class="rts-hud-group" style="display: none;">
+        <div class="stats-group">
+          <div class="stat-box" title="Puntos de Mando (CP) para refuerzos tácticos">
+            <span class="stat-label">📡 Mando</span>
+            <span id="stat-cp" class="stat-val" style="color: #38bdf8;">100 CP</span>
+          </div>
+          <div class="stat-box" title="Tesoro de Guerra">
+            <span class="stat-label">🪙 Oro</span>
+            <span id="stat-gold" class="stat-val" style="color: #fbbf24;">500</span>
+          </div>
+          <div class="stat-box" title="Regimientos activos">
+            <span class="stat-label">👥 Tropas</span>
+            <span class="stat-val"><span id="stat-blue-troops" style="color: #60a5fa;">0</span> vs <span id="stat-red-troops" style="color: #f87171;">0</span></span>
+          </div>
+          <div class="stat-box" title="Control del frente">
+            <span class="stat-label">⚔️ Frente</span>
+            <span id="stat-territory" class="stat-val" style="color: #cbd5e1;">50% / 50%</span>
+          </div>
+        </div>
+        <div class="scenario-controls">
+          <select id="scenario-select" class="dropdown-select" onchange="onScenarioChange(this.value)">
+            <option value="pavia" selected>🏰 Pavía 1525</option>
+            <option value="rocroi">🛡️ Rocroi 1643</option>
+            <option value="sekigahara">⛩️ Sekigahara 1600</option>
+            <option value="waterloo">👑 Waterloo 1815</option>
+            <option value="cannae">🏛️ Cannas 216 a.C.</option>
+            <option value="agincourt">🏹 Agincourt 1415</option>
+          </select>
+          <select id="era-select" class="dropdown-select" onchange="onEraChange(this.value)">
+            <option value="antiquity">🏛️ Antigüedad</option>
+            <option value="medieval">🏰 Edad Media</option>
+            <option value="renaissance" selected>⚜️ Renacimiento</option>
+            <option value="modern">🦅 Ilustración</option>
+            <option value="napoleonic">👑 Napoleónico</option>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <!-- CAMPAIGN 4X HUD -->
-    <div id="campaign-hud" class="campaign-hud-group">
-      <div class="stats-group">
-        <div class="stat-box" title="Tesoro Imperial. Se obtiene mediante impuestos y comercio.">
-          <span class="stat-label">🪙 Oro</span>
-          <span id="camp-gold" class="stat-val" style="color: #fbbf24;">1200</span>
-        </div>
-        <div class="stat-box" title="Graneros y Cosechas. Sostiene al pueblo y mantiene a los ejércitos.">
-          <span class="stat-label">🌾 Alimentos</span>
-          <span id="camp-food" class="stat-val" style="color: #86efac;">800</span>
-        </div>
-        <div class="stat-box" title="Hierro forjado. Vital para fabricar armas pesadas, picas y fundir cañones.">
-          <span class="stat-label">⛏️ Hierro</span>
-          <span id="camp-iron" class="stat-val" style="color: #cbd5e1;">500</span>
-        </div>
-        <div class="stat-box" title="Ciencia y Conocimiento. Generado en Universidades para avanzar de Época.">
-          <span class="stat-label">📜 Ciencia</span>
-          <span id="camp-science" class="stat-val" style="color: #93c5fd;">100</span>
-        </div>
+    <!-- Right Wing: Strategic Mode Toggle, Chancelleries & Settings -->
+    <div class="top-bar-right">
+      <div class="mode-tabs">
+        <button id="tab-campaign" class="btn-tab active" onclick="switchGameMode('campaign')" title="Gran Campaña 4X">🌍 4X</button>
+        <button id="tab-rts" class="btn-tab" onclick="switchGameMode('rts')" title="Combate Táctico RTS">⚔️ RTS</button>
       </div>
-
-      <div class="campaign-actions">
-        <button id="camp-epoch" class="btn-epoch" onclick="openTechTreeModal()">⚜️ Época III: Renacimiento</button>
-        <button class="btn-camp-action" onclick="openDiplomacyModal()">🤝 Diplomacia</button>
-        <button class="btn-camp-action btn-civ" onclick="openCivBuilderModal()">👑 Civilización</button>
-        <button class="btn-camp-action" onclick="window.codexBellum.open()" title="Tratados de Táctica & Enciclopedia">📖 Codex</button>
-        <button class="btn-camp-action" onclick="openP2PModal()" title="Multijugador P2P WebRTC">🌐 P2P</button>
-        <div id="camp-turn" class="turn-label">Turno 1 • Primavera 1525</div>
-        <button id="btn-end-turn" class="btn-end-turn" onclick="window.game.campaign.endTurn()">⌛ Fin de Turno</button>
-      </div>
-    </div>
-
-    <!-- RTS TACTICAL HUD (Hidden when in Campaign mode) -->
-    <div id="rts-hud" class="rts-hud-group" style="display: none;">
-      <div class="stats-group">
-        <div class="stat-box" title="Puntos de Mando (CP). Wargame style: se generan manteniendo zonas y campamentos para solicitar refuerzos tácticos.">
-          <span class="stat-label">📡 Mando (CP)</span>
-          <span id="stat-cp" class="stat-val" style="color: #38bdf8;">100 CP</span>
-        </div>
-        <div class="stat-box" title="Tesoro de Guerra del ejército">
-          <span class="stat-label">🪙 Oro</span>
-          <span id="stat-gold" class="stat-val" style="color: #fbbf24;">500</span>
-        </div>
-        <div class="stat-box" title="Regimientos activos en combate">
-          <span class="stat-label">👥 Regimientos</span>
-          <span class="stat-val"><span id="stat-blue-troops" style="color: #60a5fa;">0</span> vs <span id="stat-red-troops" style="color: #f87171;">0</span></span>
-        </div>
-        <div class="stat-box" title="Control del frente de batalla">
-          <span class="stat-label">⚔️ Frente</span>
-          <span id="stat-territory" class="stat-val" style="color: #cbd5e1;">50% / 50%</span>
-        </div>
-      </div>
-
-      <div class="scenario-controls">
-        <select id="scenario-select" class="dropdown-select" onchange="onScenarioChange(this.value)">
-          <option value="pavia" selected>🏰 Pavía 1525 (Asalto a la Brecha)</option>
-          <option value="agincourt">🏹 Agincourt 1415 (Lodo y Flechas)</option>
-          <option value="cannae">🏛️ Cannas 216 a.C. (Doble Envolvimiento)</option>
-          <option value="waterloo">👑 Waterloo 1815 (Cuadros y Coraceros)</option>
-        </select>
-
-        <select id="era-select" class="dropdown-select" onchange="onEraChange(this.value)">
-          <option value="antiquity">🏛️ Antigüedad Clásica</option>
-          <option value="medieval">🏰 Edad Media</option>
-          <option value="renaissance" selected>⚜️ Renacimiento & Pavía</option>
-          <option value="modern">🦅 Edad Moderna / Siglo XVIII</option>
-          <option value="napoleonic">👑 Siglo XIX / Napoleónico</option>
-        </select>
-      </div>
-
-      <div class="speed-group">
-        <button id="btn-pause" class="btn-icon" onclick="window.game.togglePause()">⏸️ Pausa</button>
-        <button class="btn-icon" onclick="window.game.setGameSpeed(0.5)">0.5x</button>
-        <button class="btn-icon active" onclick="window.game.setGameSpeed(1.0)">1x</button>
-        <button class="btn-icon" onclick="window.game.setGameSpeed(2.0)">2x</button>
-        <button id="btn-tactical-drawer-toggle" class="btn-icon btn-tactical-toggle" onclick="window.game.toggleTacticalDrawer()" title="Desplegar Puesto de Mando Táctico">⚜️ Estado Mayor ⏷</button>
-        <button class="btn-icon" onclick="window.codexBellum.open()" title="Abrir Codex Bellum">📖</button>
-        <button class="btn-icon" onclick="openP2PModal()" title="Multijugador P2P">🌐</button>
-        <button id="btn-audio" class="btn-icon" onclick="toggleSoundUI()">🔊</button>
-      </div>
+      <button class="btn-camp-action" onclick="openDiplomacyModal()" title="Cancillería Diplomática"><span class="btn-icon">🤝</span><span class="btn-action-text"> Diplomacia</span></button>
+      <button class="btn-camp-action btn-civ" onclick="openCivBuilderModal()" title="Forjador de Civilizaciones & Doctrinas"><span class="btn-icon">👑</span><span class="btn-action-text"> Corona</span></button>
+      <button class="btn-camp-action" onclick="window.codexBellum.open()" title="Tratados de Guerra & Codex Bellum"><span class="btn-icon">📖</span><span class="btn-action-text"> Codex</span></button>
+      <button class="btn-camp-action" onclick="openP2PModal()" title="Duelo Multijugador P2P WebRTC"><span class="btn-icon">🌐</span><span class="btn-action-text"> P2P</span></button>
+      <button class="btn-camp-action btn-scale-ui" onclick="openUIScaleModal()" title="Ajustar Escala Visual para tu Pantalla"><span class="btn-icon">⚙️</span><span class="btn-action-text"> Escala</span></button>
+      <button id="btn-audio" class="btn-camp-action" onclick="toggleSoundUI()" title="Sonido & Música"><span class="btn-icon">🔊</span></button>
     </div>
   </header>
 
@@ -392,6 +395,20 @@
     <div class="log-title">Crónica de Campaña & Batalla</div>
     <div id="battle-log-entries"></div>
   </section>
+
+  <!-- Floating Imperial Turn Seal (Fixed Bottom-Right for 4X Campaign) -->
+  <div id="imperial-turn-seal" class="imperial-turn-seal">
+    <div class="turn-seal-frame">
+      <div id="camp-turn-season-year" class="turn-season-badge">☀️ Primavera 1500</div>
+      <div id="camp-turn-number" class="turn-counter-badge">Turno I</div>
+      <button id="btn-pass-turn-seal" class="btn-end-turn-seal" onclick="window.game.campaign.endTurn()" title="Concluir temporada y procesar movimientos, cosechas y diplomacia en todo el orbe">
+        <span class="seal-inner-circle">
+          <span class="seal-icon">⌛</span>
+          <span class="seal-text">PASAR TURNO</span>
+        </span>
+      </button>
+    </div>
+  </div>
 
   <!-- MODAL: Pre-Battle Clash (Total War Style) -->
   <div id="pre-battle-modal" class="modal-overlay" style="display: none;"></div>
@@ -838,6 +855,43 @@
     </div>
   </div>
 
+  <!-- MODAL: Desktop Display & UI Scaling (Adaptabilidad de Resolución) -->
+  <div id="ui-scale-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-window glass-panel scale-modal-window">
+      <div class="modal-head">
+        <h2>⚙️ ESCALABILIDAD &amp; DENSIDAD DE INTERFAZ</h2>
+        <button class="btn-close" onclick="closeUIScaleModal()">✕</button>
+      </div>
+      <div class="scale-modal-content">
+        <p class="scale-modal-desc">
+          Adapta la densidad visual de los paneles, cartas y barras de mando al tamaño y resolución nativa de tu monitor de escritorio.
+        </p>
+        <div class="scale-options-grid">
+          <button class="btn-scale-option" onclick="setCustomUIScale('auto')">
+            <strong>🖥️ Automático (Recomendado)</strong>
+            <small>Ajuste dinámico nativo por Media Queries según la resolución de pantalla detectada.</small>
+          </button>
+          <button class="btn-scale-option" onclick="setCustomUIScale(0.85)">
+            <strong>📐 Compacto (85%)</strong>
+            <small>Recomendado para portátiles y pantallas HD (1366x768 / 1280x720).</small>
+          </button>
+          <button class="btn-scale-option" onclick="setCustomUIScale(1.0)">
+            <strong>👑 Estándar (100%)</strong>
+            <small>Optimizado para resolución Full HD (1920x1080) y nitidez clásica.</small>
+          </button>
+          <button class="btn-scale-option" onclick="setCustomUIScale(1.15)">
+            <strong>✨ Expandido (115%)</strong>
+            <small>Diseñado para monitores 2K QHD (2560x1440).</small>
+          </button>
+          <button class="btn-scale-option" onclick="setCustomUIScale(1.35)">
+            <strong>🏛️ Soberano (135%)</strong>
+            <small>Escalado de alta visibilidad para monitores 4K UHD (3840x2160).</small>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 3D Globe Projection Engine (Three.js Offline) -->
   <script src="lib/three.min.js"></script>
 
@@ -922,16 +976,29 @@
         }, 400);
       }
 
+      const savedScale = localStorage.getItem('chronicles_ui_scale');
+      if (savedScale) {
+        document.documentElement.style.setProperty('--ui-scale', savedScale);
+      }
+
       const campaignParam = urlParams.get('campaign');
       if (campaignParam === 'start') {
         setTimeout(() => {
           launchSelectedCampaign();
+          const selectProv = urlParams.get('select_prov');
+          if (selectProv && window.game && window.game.campaign) {
+            const p = window.game.campaign.map.getProvinceById(selectProv);
+            if (p) window.game.campaign.selectProvince(p);
+          }
         }, 300);
       }
     });
 
     function switchGameMode(mode) {
       if (!window.game) return;
+
+      document.body.classList.toggle('mode-campaign', mode === 'campaign');
+      document.body.classList.toggle('mode-rts', mode === 'rts');
 
       document.getElementById('tab-campaign').classList.toggle('active', mode === 'campaign');
       document.getElementById('tab-rts').classList.toggle('active', mode === 'rts');
@@ -940,19 +1007,49 @@
       const unitPanel = document.getElementById('selected-unit-panel');
       const recruitBar = document.getElementById('rts-recruit-bar');
       const theatersBar = document.getElementById('campaign-theaters-bar');
+      const turnSeal = document.getElementById('imperial-turn-seal');
+      const campaignHud = document.getElementById('campaign-hud');
+      const rtsHud = document.getElementById('rts-hud');
 
       if (mode === 'campaign') {
         if (unitPanel) unitPanel.style.display = 'none';
         if (recruitBar) recruitBar.style.display = 'none';
         if (theatersBar) theatersBar.style.display = 'flex';
+        if (turnSeal) turnSeal.style.display = 'flex';
+        if (campaignHud) campaignHud.style.display = 'flex';
+        if (rtsHud) rtsHud.style.display = 'none';
       } else {
         if (provPanel) provPanel.style.display = 'none';
         if (unitPanel) unitPanel.style.display = 'block';
         if (recruitBar) recruitBar.style.display = 'flex';
         if (theatersBar) theatersBar.style.display = 'none';
+        if (turnSeal) turnSeal.style.display = 'none';
+        if (campaignHud) campaignHud.style.display = 'none';
+        if (rtsHud) rtsHud.style.display = 'flex';
       }
 
       window.game.campaign.switchMode(mode);
+    }
+
+    function openUIScaleModal() {
+      const modal = document.getElementById('ui-scale-modal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeUIScaleModal() {
+      const modal = document.getElementById('ui-scale-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function setCustomUIScale(scaleVal) {
+      if (scaleVal === 'auto') {
+        document.documentElement.style.removeProperty('--ui-scale');
+        localStorage.removeItem('chronicles_ui_scale');
+      } else {
+        document.documentElement.style.setProperty('--ui-scale', scaleVal);
+        localStorage.setItem('chronicles_ui_scale', scaleVal);
+      }
+      closeUIScaleModal();
     }
 
     function setMapModeUI(mode) {
@@ -1432,6 +1529,22 @@
       } else {
         window.game.campaign.playerFaction = selectedCampaignFaction;
         window.game.campaign.refreshUI();
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const selectProv = urlParams.get('select_prov');
+      if (selectProv && window.game.campaign && window.game.campaign.map) {
+        const p = selectProv === 'first' ? window.game.campaign.map.provinces.find(pr => pr.owner === window.game.campaign.playerFaction) : window.game.campaign.map.getProvinceById(selectProv);
+        if (p) {
+          window.game.campaign.selectProvince(p);
+          const provTab = urlParams.get('prov_tab');
+          if (provTab) window.game.campaign.switchProvinceTab(provTab);
+        }
+      }
+
+      const modalParam = urlParams.get('modal');
+      if (modalParam === 'scale') {
+        openUIScaleModal();
       }
 
       window.game.sound.playTrumpetCall();
