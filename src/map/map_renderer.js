@@ -52,64 +52,101 @@ class TacticalMap {
     const ctx = this.terrainCtx;
     ctx.clearRect(0, 0, this.width, this.height);
 
-    // 1. Base Antique Parchment / Field Texture
-    ctx.fillStyle = '#f4efe4';
+    // 1. Base Painterly Natural Earth & Meadow Texture (Warm Field Olive & Loam)
+    ctx.fillStyle = '#4a5d3f';
     ctx.fillRect(0, 0, this.width, this.height);
 
-    // Subtle paper grain & grid lines (Engraved military survey grid)
-    ctx.strokeStyle = 'rgba(180, 160, 140, 0.14)';
+    // Multi-tone organic pasture patches and soil loam
+    const step = 220;
+    for (let x = 0; x < this.width; x += step) {
+      for (let y = 0; y < this.height; y += step) {
+        const n = Math.sin(x * 0.007 + y * 0.013) * Math.cos(x * 0.011 - y * 0.005);
+        if (n > 0.18) {
+          ctx.fillStyle = 'rgba(107, 128, 86, 0.42)'; // Lush clover pasture
+          ctx.beginPath();
+          ctx.arc(x + 110, y + 110, 140, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (n < -0.18) {
+          ctx.fillStyle = 'rgba(88, 72, 52, 0.38)'; // Warm dry loam / dirt patch
+          ctx.beginPath();
+          ctx.arc(x + 110, y + 110, 130, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // Subtle survey ticks along borders (replaces invasive screen-wide CAD grid)
+    ctx.strokeStyle = 'rgba(40, 28, 18, 0.35)';
     ctx.lineWidth = 1;
-    const gridSize = 80;
-    for (let x = 0; x < this.width; x += gridSize) {
+    const borderTickStep = 160;
+    for (let x = borderTickStep; x < this.width; x += borderTickStep) {
       ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, this.height);
+      ctx.moveTo(x, 0); ctx.lineTo(x, 10);
+      ctx.moveTo(x, this.height - 10); ctx.lineTo(x, this.height);
       ctx.stroke();
     }
-    for (let y = 0; y < this.height; y += gridSize) {
+    for (let y = borderTickStep; y < this.height; y += borderTickStep) {
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(this.width, y);
+      ctx.moveTo(0, y); ctx.lineTo(10, y);
+      ctx.moveTo(this.width - 10, y); ctx.lineTo(this.width, y);
       ctx.stroke();
     }
 
-    // 2. Elevation Hills with Contour Lines & Topographic Slope Hachures
+    // 2. 3D Sunlit Elevation Hills (Directional Lighting from NW)
     this.hills.forEach(hill => {
       ctx.save();
-      ctx.fillStyle = '#e8dfcb';
+
+      // A. Directional Drop Shadow Cast to South-East
+      const shadowOffsetX = hill.rx * 0.16;
+      const shadowOffsetY = hill.ry * 0.16;
+      ctx.fillStyle = 'rgba(18, 26, 12, 0.42)';
+      ctx.beginPath();
+      ctx.ellipse(hill.x + shadowOffsetX, hill.y + shadowOffsetY, hill.rx * 1.08, hill.ry * 1.08, hill.angle || 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // B. Main 3D Hill Volume with NW Sunlit Radial Gradient
+      const sunX = hill.x - hill.rx * 0.35;
+      const sunY = hill.y - hill.ry * 0.35;
+      const hillGrad = ctx.createRadialGradient(sunX, sunY, hill.rx * 0.08, hill.x, hill.y, Math.max(hill.rx, hill.ry) * 1.15);
+      hillGrad.addColorStop(0, '#8ea862');   // Sunlit illuminated crest
+      hillGrad.addColorStop(0.35, '#768e52'); // Upper slope
+      hillGrad.addColorStop(0.75, '#566b3d'); // Lower slope
+      hillGrad.addColorStop(1.0, '#3a4928');  // Deep shaded hill base
+
+      ctx.fillStyle = hillGrad;
       ctx.beginPath();
       ctx.ellipse(hill.x, hill.y, hill.rx, hill.ry, hill.angle || 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Contour rings
-      ctx.strokeStyle = '#cfbf9f';
-      ctx.lineWidth = 1.4;
-      for (let s = 0.82; s >= 0.3; s -= 0.26) {
+      // C. Topographic Contour Rings
+      for (let s = 0.84; s >= 0.32; s -= 0.26) {
+        ctx.strokeStyle = 'rgba(195, 218, 150, 0.4)';
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.ellipse(hill.x, hill.y, hill.rx * s, hill.ry * s, hill.angle || 0, 0, Math.PI * 2);
         ctx.stroke();
       }
 
-      // Topographic slope hachures (Antique military relief engraving)
+      // D. Fine Engraved Topographic Slope Hachures
       ctx.save();
       ctx.translate(hill.x, hill.y);
       ctx.rotate(hill.angle || 0);
-      ctx.strokeStyle = 'rgba(160, 130, 95, 0.42)';
+      ctx.strokeStyle = 'rgba(42, 30, 16, 0.35)';
       ctx.lineWidth = 0.9;
-      const hachureSteps = 42;
+      const hachureSteps = 38;
       for (let i = 0; i < hachureSteps; i++) {
         const th = (i / hachureSteps) * Math.PI * 2;
         const cos = Math.cos(th);
         const sin = Math.sin(th);
         ctx.beginPath();
         ctx.moveTo(cos * hill.rx * 0.96, sin * hill.ry * 0.96);
-        ctx.lineTo(cos * hill.rx * 0.74, sin * hill.ry * 0.74);
+        ctx.lineTo(cos * hill.rx * 0.76, sin * hill.ry * 0.76);
         ctx.stroke();
 
         if (i % 2 === 0) {
           ctx.beginPath();
-          ctx.moveTo(cos * hill.rx * 0.70, sin * hill.ry * 0.70);
-          ctx.lineTo(cos * hill.rx * 0.48, sin * hill.ry * 0.48);
+          ctx.moveTo(cos * hill.rx * 0.72, sin * hill.ry * 0.72);
+          ctx.lineTo(cos * hill.rx * 0.52, sin * hill.ry * 0.52);
           ctx.stroke();
         }
       }
@@ -118,11 +155,14 @@ class TacticalMap {
       ctx.restore();
     });
 
-    // 3. Roads
+    // 3. Roads (Natural unpaved military roads with double ruts)
     ctx.save();
     this.roads.forEach(road => {
-      ctx.strokeStyle = '#e2d5be';
-      ctx.lineWidth = road.width || 22;
+      const rw = road.width || 22;
+
+      // Outer road embankment
+      ctx.strokeStyle = '#6b583f';
+      ctx.lineWidth = rw + 4;
       ctx.lineCap = 'round';
       ctx.beginPath();
       road.points.forEach((pt, idx) => {
@@ -131,18 +171,26 @@ class TacticalMap {
       });
       ctx.stroke();
 
-      // Road edge borders
-      ctx.strokeStyle = '#baa686';
-      ctx.lineWidth = 1.2;
+      // Main packed gravel/dirt surface
+      ctx.strokeStyle = '#8a7455';
+      ctx.lineWidth = rw;
+      ctx.stroke();
+
+      // Center worn path
+      ctx.strokeStyle = '#9c8665';
+      ctx.lineWidth = rw * 0.45;
       ctx.stroke();
     });
     ctx.restore();
 
-    // 4. Rivers & Bridges with Shoreline Stippling
+    // 4. Watercolor Rivers & Heavy Stone Arch Bridges
     this.rivers.forEach(river => {
       ctx.save();
-      ctx.strokeStyle = '#7ca6b8';
-      ctx.lineWidth = river.width || 32;
+      const rw = river.width || 32;
+
+      // Sandy gravel shoreline
+      ctx.strokeStyle = '#826e4f';
+      ctx.lineWidth = rw + 8;
       ctx.lineCap = 'round';
       ctx.beginPath();
       river.points.forEach((pt, idx) => {
@@ -151,20 +199,25 @@ class TacticalMap {
       });
       ctx.stroke();
 
-      // River bank lines
-      ctx.strokeStyle = '#5a8497';
-      ctx.lineWidth = 1.6;
+      // Shallow riverbanks (turquoise green)
+      ctx.strokeStyle = '#356677';
+      ctx.lineWidth = rw;
       ctx.stroke();
 
-      // Shoreline stippling dots
-      ctx.fillStyle = 'rgba(90, 132, 151, 0.4)';
+      // Deep central channel (dark navy teal)
+      ctx.strokeStyle = '#1a4150';
+      ctx.lineWidth = rw * 0.55;
+      ctx.stroke();
+
+      // Shoreline gravel pebbles
+      ctx.fillStyle = 'rgba(70, 55, 35, 0.4)';
       river.points.forEach((pt, idx) => {
         if (idx % 2 === 0) {
-          for (let s = 0; s < 5; s++) {
-            const sx = pt.x + (Math.random() - 0.5) * (river.width * 1.4);
-            const sy = pt.y + (Math.random() - 0.5) * (river.width * 1.4);
+          for (let s = 0; s < 4; s++) {
+            const sx = pt.x + (Math.random() - 0.5) * (rw * 1.3);
+            const sy = pt.y + (Math.random() - 0.5) * (rw * 1.3);
             ctx.beginPath();
-            ctx.arc(sx, sy, 0.8 + Math.random() * 0.9, 0, Math.PI * 2);
+            ctx.arc(sx, sy, 1.0 + Math.random() * 1.2, 0, Math.PI * 2);
             ctx.fill();
           }
         }
@@ -173,55 +226,87 @@ class TacticalMap {
       // Bridges
       if (river.bridges) {
         river.bridges.forEach(br => {
-          ctx.fillStyle = '#baa686';
-          ctx.strokeStyle = '#5c4933';
-          ctx.lineWidth = 2.2;
           ctx.save();
           ctx.translate(br.x, br.y);
           ctx.rotate(br.angle || 0);
-          ctx.fillRect(-18, -river.width * 0.65, 36, river.width * 1.3);
-          ctx.strokeRect(-18, -river.width * 0.65, 36, river.width * 1.3);
+
+          // Stone piers
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(-22, -rw * 0.72, 44, rw * 1.44);
+
+          // Bridge Roadway Deck
+          ctx.fillStyle = '#9c8665';
+          ctx.fillRect(-18, -rw * 0.68, 36, rw * 1.36);
+
+          // Stone Parapets
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(-22, -rw * 0.72, 44, 4);
+          ctx.fillRect(-22, rw * 0.72 - 4, 44, 4);
+
+          // Pointed Cutwaters
+          ctx.beginPath();
+          ctx.moveTo(0, -rw * 0.72 - 6);
+          ctx.lineTo(-7, -rw * 0.72);
+          ctx.lineTo(7, -rw * 0.72);
+          ctx.closePath();
+          ctx.fill();
+
           ctx.restore();
         });
       }
       ctx.restore();
     });
 
-    // 5. Forests & Groves (Antique Woodcut Styling with Trunks & Canopies)
+    // 5. Painterly Forest Groves (Dense Woodcut Canopy with Ground Shadows)
     this.forests.forEach(forest => {
       ctx.save();
-      ctx.fillStyle = '#8ea375';
+
+      // Soft Grove Ground Shadow Cast to SE
+      ctx.fillStyle = 'rgba(15, 22, 10, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(forest.x + forest.rx * 0.12, forest.y + forest.ry * 0.12, forest.rx * 1.05, forest.ry * 1.05, forest.angle || 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Base grove undergrowth
+      ctx.fillStyle = '#365324';
       ctx.beginPath();
       ctx.ellipse(forest.x, forest.y, forest.rx, forest.ry, forest.angle || 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Outer boundary engraving
-      ctx.strokeStyle = '#637e4c';
-      ctx.lineWidth = 1.4;
-      ctx.stroke();
-
-      // Tree clusters inside grove
-      const treeCount = Math.floor((forest.rx * forest.ry) / 280);
+      // Tree clusters inside grove with 3D canopies
+      const treeCount = Math.floor((forest.rx * forest.ry) / 260);
       for (let t = 0; t < treeCount; t++) {
         const u = Math.random();
         const v = Math.random();
         const r = Math.sqrt(u);
         const theta = v * 2 * Math.PI;
-        const tx = forest.x + r * forest.rx * 0.85 * Math.cos(theta);
-        const ty = forest.y + r * forest.ry * 0.85 * Math.sin(theta);
+        const tx = forest.x + r * forest.rx * 0.88 * Math.cos(theta);
+        const ty = forest.y + r * forest.ry * 0.88 * Math.sin(theta);
+        const cRadius = 5.0 + Math.random() * 4.5;
 
-        // Tiny woodcut tree trunk
-        ctx.fillStyle = '#5c4033';
-        ctx.fillRect(tx - 0.7, ty, 1.4, 3.5);
-
-        // Canopy crown
-        ctx.fillStyle = '#5a7543';
-        ctx.strokeStyle = '#3e522d';
-        ctx.lineWidth = 0.8;
+        // Tree shadow
+        ctx.fillStyle = 'rgba(10, 16, 8, 0.35)';
         ctx.beginPath();
-        ctx.arc(tx, ty - 2, 4 + Math.random() * 3.5, 0, Math.PI * 2);
+        ctx.ellipse(tx + 2, ty + 2.5, cRadius * 0.9, cRadius * 0.6, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.stroke();
+
+        // Shaded under-canopy
+        ctx.fillStyle = '#263b19';
+        ctx.beginPath();
+        ctx.arc(tx, ty, cRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sunlit canopy crown (NW highlight)
+        ctx.fillStyle = '#4c7032';
+        ctx.beginPath();
+        ctx.arc(tx - 1.2, ty - 1.2, cRadius * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Top sun highlight
+        ctx.fillStyle = '#659242';
+        ctx.beginPath();
+        ctx.arc(tx - 1.8, ty - 1.8, cRadius * 0.38, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.restore();
     });
@@ -229,7 +314,6 @@ class TacticalMap {
     // 6. Fortifications & Star Bastions (Trace Italienne)
     this.fortifications.forEach(fort => {
       ctx.save();
-      // Wall / Bastion polygon
       if (fort.type === 'polygon' || fort.type === 'bastion') {
         ctx.fillStyle = '#94a3b8';
         ctx.strokeStyle = '#334155';
@@ -243,7 +327,6 @@ class TacticalMap {
         ctx.fill();
         ctx.stroke();
 
-        // Parapet line
         ctx.strokeStyle = '#64748b';
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -257,16 +340,14 @@ class TacticalMap {
         ctx.stroke();
       }
 
-      // Breaches (broken wall sections with rubble)
       if (fort.breaches) {
         fort.breaches.forEach(b => {
-          ctx.fillStyle = '#e2d9c8'; // Open ground in breach
+          ctx.fillStyle = '#6b583f';
           ctx.beginPath();
           ctx.arc(b.x, b.y, b.radius || 18, 0, Math.PI * 2);
           ctx.fill();
 
-          // Rubble rocks
-          ctx.fillStyle = '#64748b';
+          ctx.fillStyle = '#475569';
           for (let r = 0; r < 8; r++) {
             const rx = b.x + (Math.random() - 0.5) * (b.radius * 1.6);
             const ry = b.y + (Math.random() - 0.5) * (b.radius * 1.6);
@@ -279,30 +360,140 @@ class TacticalMap {
       ctx.restore();
     });
 
-    // 7. Camps / Strategic Towns
+    // 7. Authentic Military Field Encampments (Canvas Tents, Campfires, Palisades)
     this.camps.forEach(camp => {
       ctx.save();
-      ctx.fillStyle = camp.team === 0 ? 'rgba(37, 99, 235, 0.25)' : (camp.team === 1 ? 'rgba(220, 38, 38, 0.25)' : 'rgba(180, 160, 120, 0.25)');
+      const teamColor = camp.team === 0 ? '#1d4ed8' : (camp.team === 1 ? '#b91c1c' : '#8c7453');
+      const teamAccent = camp.team === 0 ? '#60a5fa' : (camp.team === 1 ? '#f87171' : '#cbb89d');
+
+      // A. Worn dirt clearing
+      ctx.fillStyle = 'rgba(110, 92, 68, 0.55)';
       ctx.beginPath();
-      ctx.arc(camp.x, camp.y, 36, 0, Math.PI * 2);
+      ctx.arc(camp.x, camp.y, 48, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = camp.team === 0 ? '#3b82f6' : (camp.team === 1 ? '#ef4444' : '#a89478');
-      ctx.lineWidth = 2;
+
+      // Subtle dashed camp perimeter (tactical boundary)
+      ctx.strokeStyle = teamAccent;
+      ctx.lineWidth = 1.2;
       ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(camp.x, camp.y, 48, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Small town buildings / tents
-      ctx.fillStyle = '#b91c1c'; // Tile roofs
-      ctx.fillRect(camp.x - 12, camp.y - 12, 10, 8);
-      ctx.fillRect(camp.x + 2, camp.y - 14, 12, 9);
-      ctx.fillRect(camp.x - 8, camp.y + 2, 14, 10);
+      // B. Defensive Timber Abatis / Palisade Stakes
+      ctx.strokeStyle = '#54422e';
+      ctx.lineWidth = 2.0;
+      for (let st = -24; st <= 24; st += 12) {
+        ctx.beginPath();
+        ctx.moveTo(camp.x + st, camp.y - 36);
+        ctx.lineTo(camp.x + st + 3, camp.y - 42);
+        ctx.stroke();
+      }
 
-      // Label
+      // C. Large Officer Pavilion Tent (Commander's Headquarters)
+      ctx.fillStyle = 'rgba(20, 14, 10, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(camp.x - 10, camp.y - 6, 18, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ede3d1';
+      ctx.strokeStyle = '#785e3c';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.ellipse(camp.x - 12, camp.y - 10, 16, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Faction Colored Scalloped Valance
+      ctx.fillStyle = teamColor;
+      ctx.beginPath();
+      ctx.ellipse(camp.x - 12, camp.y - 6, 16, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Center Tent Pole & Flag
+      ctx.strokeStyle = '#54422e';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(camp.x - 12, camp.y - 12);
+      ctx.lineTo(camp.x - 12, camp.y - 24);
+      ctx.stroke();
+
+      // Waving Pennant Standard
+      ctx.fillStyle = teamColor;
+      ctx.beginPath();
+      ctx.moveTo(camp.x - 12, camp.y - 24);
+      ctx.lineTo(camp.x - 2, camp.y - 21);
+      ctx.lineTo(camp.x - 12, camp.y - 18);
+      ctx.closePath();
+      ctx.fill();
+
+      // D. Soldier Wedge A-Frame Tents
+      for (let t = 0; t < 3; t++) {
+        const tx = camp.x + 8 + (t % 2) * 12;
+        const ty = camp.y - 18 + t * 12;
+
+        ctx.fillStyle = 'rgba(20, 14, 10, 0.35)';
+        ctx.fillRect(tx - 4, ty + 2, 9, 6);
+
+        ctx.fillStyle = '#e5dbca';
+        ctx.strokeStyle = '#8a7355';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(tx, ty - 6);
+        ctx.lineTo(tx - 6, ty + 4);
+        ctx.lineTo(tx + 6, ty + 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.strokeStyle = '#6b5438';
+        ctx.beginPath();
+        ctx.moveTo(tx, ty - 6);
+        ctx.lineTo(tx, ty + 4);
+        ctx.stroke();
+      }
+
+      // E. Stone Campfire with Glowing Embers
+      ctx.fillStyle = '#3a342e';
+      ctx.beginPath();
+      ctx.arc(camp.x - 6, camp.y + 16, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.arc(camp.x - 6, camp.y + 16, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(camp.x - 6, camp.y + 16, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // F. Stacked Powder Kegs & Supply Crates
+      ctx.fillStyle = '#6b4c28';
+      ctx.fillRect(camp.x + 14, camp.y + 12, 7, 7);
+      ctx.fillStyle = '#4a3319';
+      ctx.fillRect(camp.x + 22, camp.y + 10, 6, 6);
       ctx.fillStyle = '#1e293b';
-      ctx.font = 'bold 11px "Outfit", sans-serif';
+      ctx.beginPath();
+      ctx.ellipse(camp.x + 18, camp.y + 21, 3.5, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // G. Cartouche Label Plaque (Classical Renaissance Survey Style)
+      const name = camp.name || 'Campamento';
+      ctx.font = 'bold 9.5px "Cinzel", Georgia, serif';
+      const textW = ctx.measureText(name).width + 16;
+
+      ctx.fillStyle = 'rgba(20, 13, 8, 0.92)';
+      ctx.strokeStyle = '#c89b3c';
+      ctx.lineWidth = 1.0;
+      ctx.fillRect(camp.x - textW * 0.5, camp.y + 34, textW, 16);
+      ctx.strokeRect(camp.x - textW * 0.5, camp.y + 34, textW, 16);
+
+      ctx.fillStyle = '#fef08a';
       ctx.textAlign = 'center';
-      ctx.fillText(camp.name || 'Campamento', camp.x, camp.y + 30);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(name, camp.x, camp.y + 42);
+
       ctx.restore();
     });
 
@@ -313,7 +504,7 @@ class TacticalMap {
         ctx.translate(res.x, res.y);
 
         // Circular stone base
-        ctx.fillStyle = 'rgba(30, 41, 59, 0.4)';
+        ctx.fillStyle = 'rgba(30, 20, 12, 0.6)';
         ctx.beginPath();
         ctx.arc(0, 0, 18, 0, Math.PI * 2);
         ctx.fill();
@@ -323,7 +514,6 @@ class TacticalMap {
           ctx.fillStyle = '#fbbf24';
           ctx.lineWidth = 1.8;
           ctx.stroke();
-          // Gold nugget icon
           ctx.font = '14px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -333,7 +523,6 @@ class TacticalMap {
           ctx.fillStyle = '#cbd5e1';
           ctx.lineWidth = 1.8;
           ctx.stroke();
-          // Iron pickaxe / anvil icon
           ctx.font = '14px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -343,7 +532,6 @@ class TacticalMap {
           ctx.fillStyle = '#bef264';
           ctx.lineWidth = 1.8;
           ctx.stroke();
-          // Grain wheat icon
           ctx.font = '14px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -351,13 +539,16 @@ class TacticalMap {
         }
 
         // Label badge
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-        ctx.fillRect(-45, 14, 90, 14);
-        ctx.fillStyle = '#f8fafc';
-        ctx.font = 'bold 8.5px "Outfit", sans-serif';
+        ctx.fillStyle = 'rgba(20, 13, 8, 0.9)';
+        ctx.strokeStyle = '#8c6a23';
+        ctx.lineWidth = 0.8;
+        ctx.fillRect(-45, 14, 90, 15);
+        ctx.strokeRect(-45, 14, 90, 15);
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'bold 8.5px "Cinzel", serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(res.name || res.type.toUpperCase(), 0, 21);
+        ctx.fillText(res.name || res.type.toUpperCase(), 0, 22);
 
         ctx.restore();
       });
