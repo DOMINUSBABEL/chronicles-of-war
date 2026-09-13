@@ -244,7 +244,7 @@ class CampaignManager {
           <div style="font-size:11px;">🪙 Valor Fiscal: <strong style="color:#38bdf8">${province.economyValue || 25}</strong></div>
           <div style="font-size:11px;">🛣️ Infraestructura: <strong style="color:#a78bfa">Nv. ${province.infrastructureLevel || 1} / 5</strong></div>
           <div style="font-size:11px;">🛡️ Baluartes: <strong style="color:#34d399">Nv. ${province.defenseLevel || 1} / 4</strong></div>
-          <div style="font-size:11px;">🗺️ Terreno: <strong style="color:#cbd5e1">${province.terrain.toUpperCase()}</strong></div>
+          <div style="font-size:11px;">📦 Recurso: <strong style="color:#f59e0b">${(province.tradeGood || 'grain').toUpperCase()}</strong></div>
         </div>
 
         <!-- Yield Grid -->
@@ -468,6 +468,18 @@ class CampaignManager {
 
     if (epochEl) {
       epochEl.innerHTML = `${curEpoch.icon} ${curEpoch.name}`;
+    }
+  }
+
+  setMapMode(mode) {
+    if (this.map) {
+      this.map.setMapMode(mode);
+    }
+  }
+
+  flyToTheater(theaterKey) {
+    if (this.map) {
+      this.map.flyToTheater(theaterKey);
     }
   }
 

@@ -26,6 +26,7 @@ class Province {
     this.publicOrder = 85;
 
     // Age of History 3 Administrative attributes
+    this.tradeGood = data.tradeGood || 'grain'; // 8 goods: grain, wool, timber, iron, saltpeter, spices, silver, gold
     this.population = data.population || 60000;
     this.developmentLevel = data.developmentLevel || Math.max(1, this.cityLevel * 2); // 1 to 10
     this.economyValue = data.economyValue || (this.cityLevel * 25);
@@ -62,6 +63,18 @@ class Province {
     if (this.hasBuilding('market')) gold += 70;
     if (this.hasBuilding('university')) science += 45;
     if (this.hasPort) gold += 55;
+
+    // Strategic Trade Goods yield impact (Victoria & AoH3)
+    switch (this.tradeGood) {
+      case 'grain': food += 70; gold += 20; break;
+      case 'wool': gold += 45; science += 10; break;
+      case 'timber': gold += 35; iron += 20; break;
+      case 'iron': iron += 75; gold += 30; break;
+      case 'saltpeter': science += 40; gold += 45; iron += 20; break;
+      case 'spices': gold += 115; break;
+      case 'silver': gold += 150; break;
+      case 'gold': gold += 190; break;
+    }
 
     return { gold, food, iron, science };
   }
@@ -152,6 +165,66 @@ class StrategicCampaignMap {
     this.zoom = 1.15;
     this.camX = (cWidth * 0.5) - (1150 * this.zoom);
     this.camY = (cHeight * 0.5) - (340 * this.zoom);
+
+    // Smooth camera target state & transitions
+    this.targetZoom = this.zoom;
+    this.targetCamX = this.camX;
+    this.targetCamY = this.camY;
+    this.isTransitioning = false;
+
+    // Active Map Mode: 'political' | 'development' | 'trade' | 'military'
+    this.mapMode = 'political';
+
+    // Historical War Theaters for deep focal zoom (especially concentrated Europe)
+    this.theaters = {
+      europe: { x: 1180, y: 300, zoom: 3.2, name: 'Europa Central' },
+      flanders: { x: 1150, y: 275, zoom: 4.2, name: 'Flandes & Rin' },
+      spain: { x: 1100, y: 380, zoom: 2.8, name: 'Castilla & Mediterráneo' },
+      americas: { x: 580, y: 520, zoom: 1.6, name: 'Las Américas' },
+      asia: { x: 1950, y: 420, zoom: 2.0, name: 'Asia Oriental' },
+      mena: { x: 1380, y: 420, zoom: 2.4, name: 'Levante & Oriente Medio' },
+      global: { x: 1200, y: 580, zoom: 0.75, name: 'Orbe Global' }
+    };
+  }
+
+  setMapMode(mode) {
+    if (['political', 'development', 'trade', 'military'].includes(mode)) {
+      this.mapMode = mode;
+    }
+  }
+
+  flyTo(worldX, worldY, zoom) {
+    const cWidth = this.canvas ? this.canvas.width : 1600;
+    const cHeight = this.canvas ? this.canvas.height : 900;
+    this.targetZoom = Math.max(0.4, Math.min(4.5, zoom));
+    this.targetCamX = (cWidth * 0.5) - (worldX * this.targetZoom);
+    this.targetCamY = (cHeight * 0.5) - (worldY * this.targetZoom);
+    this.isTransitioning = true;
+  }
+
+  flyToTheater(theaterKey) {
+    const th = this.theaters[theaterKey];
+    if (th) {
+      this.flyTo(th.x, th.y, th.zoom);
+    }
+  }
+
+  _updateCamera() {
+    if (this.isTransitioning) {
+      const lerp = 0.12;
+      this.camX += (this.targetCamX - this.camX) * lerp;
+      this.camY += (this.targetCamY - this.camY) * lerp;
+      this.zoom += (this.targetZoom - this.zoom) * lerp;
+
+      if (Math.abs(this.camX - this.targetCamX) < 0.6 &&
+          Math.abs(this.camY - this.targetCamY) < 0.6 &&
+          Math.abs(this.zoom - this.targetZoom) < 0.005) {
+        this.camX = this.targetCamX;
+        this.camY = this.targetCamY;
+        this.zoom = this.targetZoom;
+        this.isTransitioning = false;
+      }
+    }
   }
 
   getProvinceById(id) {
@@ -176,6 +249,9 @@ class StrategicCampaignMap {
     const w = this.canvas.width;
     const h = this.canvas.height;
     this.animTime += 1;
+
+    // Update smooth camera lerp if in transition
+    this._updateCamera();
 
     // 1. Clear Canvas with Antique Ocean Tint
     ctx.save();
@@ -383,6 +459,18 @@ class StrategicCampaignMap {
   _renderProvinces(ctx) {
     const factionsObj = (typeof FACTIONS !== 'undefined') ? FACTIONS : {};
 
+    // Trade good labels and icons
+    const tradeLabels = {
+      grain: { icon: '🌾', name: 'Grano', color: '#16a34a' },
+      wool: { icon: '🧶', name: 'Lana', color: '#d97706' },
+      timber: { icon: '🪵', name: 'Madera', color: '#65a30d' },
+      iron: { icon: '⛏️', name: 'Hierro', color: '#475569' },
+      saltpeter: { icon: '🧂', name: 'Salitre', color: '#9333ea' },
+      spices: { icon: '🌶️', name: 'Especias', color: '#db2777' },
+      silver: { icon: '🥈', name: 'Plata', color: '#94a3b8' },
+      gold: { icon: '🪙', name: 'Oro', color: '#eab308' }
+    };
+
     this.provinces.forEach(p => {
       const fac = factionsObj[p.owner] || factionsObj.spain || {
         name: 'Imperio',
@@ -395,7 +483,7 @@ class StrategicCampaignMap {
 
       ctx.save();
 
-      // 1. Draw Province Territorial Zone
+      // 1. Draw Province Territorial Polygon
       ctx.beginPath();
       if (p.polygon && p.polygon.length > 2) {
         p.polygon.forEach((pt, idx) => {
@@ -407,52 +495,114 @@ class StrategicCampaignMap {
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
       }
 
-      // Territory tint with faction color
-      ctx.fillStyle = isHovered ? (fac.colors.accent || '#38bdf8') : (fac.colors.primary || '#d97706');
-      ctx.globalAlpha = isSelected ? 0.40 : (isHovered ? 0.30 : 0.18);
+      // 2. Compute fill color according to active Mapmode
+      let fillColor = fac.colors.primary || '#d97706';
+      let fillAlpha = isSelected ? 0.45 : (isHovered ? 0.35 : 0.22);
+
+      if (this.mapMode === 'development') {
+        const lvl = p.developmentLevel || 1;
+        if (lvl <= 2) fillColor = '#78350f';
+        else if (lvl <= 4) fillColor = '#d97706';
+        else if (lvl <= 6) fillColor = '#eab308';
+        else if (lvl <= 8) fillColor = '#10b981';
+        else fillColor = '#06b6d4';
+        fillAlpha = isSelected ? 0.60 : (isHovered ? 0.50 : 0.38);
+      } else if (this.mapMode === 'trade') {
+        const tg = tradeLabels[p.tradeGood] || tradeLabels.grain;
+        fillColor = tg.color;
+        fillAlpha = isSelected ? 0.55 : (isHovered ? 0.45 : 0.32);
+      } else if (this.mapMode === 'military') {
+        const def = p.defenseLevel || 0;
+        if (def === 0) fillColor = '#334155';
+        else if (def === 1) fillColor = '#b45309';
+        else if (def === 2) fillColor = '#ea580c';
+        else fillColor = '#991b1b';
+        fillAlpha = isSelected ? 0.55 : (isHovered ? 0.45 : 0.32);
+      }
+
+      if (isHovered && this.mapMode === 'political') {
+        fillColor = fac.colors.accent || '#38bdf8';
+      }
+
+      ctx.fillStyle = fillColor;
+      ctx.globalAlpha = fillAlpha;
       ctx.fill();
 
-      // Gilded Territorial Border
+      // 3. Multi-layered Baroque Territorial Border
       ctx.globalAlpha = 1.0;
-      ctx.strokeStyle = isSelected ? '#fbbf24' : (fac.colors.primary || '#d97706');
-      ctx.lineWidth = isSelected ? 3.0 : 1.5;
-      ctx.stroke();
+      if (isSelected) {
+        // Pulsating golden selection halo
+        const pulse = Math.sin(this.animTime * 0.12) * 0.8;
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 3.2 + pulse;
+        ctx.stroke();
+      } else if (isHovered) {
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+      } else {
+        // Gilded fine boundary
+        ctx.strokeStyle = fac.colors.primary || '#d97706';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+      }
 
-      // 2. Port Anchor (If province has port)
-      if (p.hasPort) {
-        const portX = p.x + p.radius * 0.55;
-        const portY = p.y + p.radius * 0.45;
+      // 4. Port Anchor (If province has port and visible at zoom)
+      if (p.hasPort && this.zoom >= 0.95) {
+        const portX = p.x + p.radius * 0.52;
+        const portY = p.y + p.radius * 0.42;
         ctx.fillStyle = '#38bdf8';
-        ctx.font = '11px sans-serif';
+        ctx.font = 'bold 11px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('⚓', portX, portY);
       }
 
-      // 3. City / Star Bastion Citadel & Flag
-      this._renderCitadel(ctx, p, fac, isSelected);
+      // 5. City Citadel & LOD Overlay
+      this._renderCitadel(ctx, p, fac, isSelected, tradeLabels);
 
       ctx.restore();
     });
   }
 
-  _renderCitadel(ctx, p, fac, isSelected) {
+  _renderCitadel(ctx, p, fac, isSelected, tradeLabels) {
     const cx = p.x;
     const cy = p.y;
-    const isFortress = p.hasBuilding('star_bastion') || p.cityLevel >= 3;
+    const isFortress = p.hasBuilding('star_bastion') || p.cityLevel >= 3 || p.defenseLevel >= 3;
+    const z = this.zoom;
 
     ctx.save();
 
+    // ==========================================
+    // LOD TIER 1: MACRO VIEW (Zoom < 1.05)
+    // Clean geopolitical view without clutter
+    // ==========================================
+    if (z < 1.05) {
+      ctx.fillStyle = isSelected ? '#fbbf24' : (fac.colors.primary || '#d97706');
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.restore();
+      return;
+    }
+
+    // ==========================================
+    // LOD TIER 2 & 3: CITADEL DRAWING (Zoom >= 1.05)
+    // ==========================================
     if (isFortress) {
-      // Star Bastion (Trace Italienne) 4-pointed fortress shape
+      // Star Bastion (Trace Italienne) 8-pointed shape
       ctx.fillStyle = '#1e293b';
-      ctx.strokeStyle = '#d97706';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = isSelected ? '#fbbf24' : '#d97706';
+      ctx.lineWidth = 1.6;
 
       ctx.beginPath();
       const numPoints = 8;
-      const outerR = 14;
-      const innerR = 8;
+      const outerR = z > 2.2 ? 16 : 13;
+      const innerR = z > 2.2 ? 9 : 7;
       for (let i = 0; i < numPoints * 2; i++) {
         const r = (i % 2 === 0) ? outerR : innerR;
         const a = (i / (numPoints * 2)) * Math.PI * 2;
@@ -464,26 +614,34 @@ class StrategicCampaignMap {
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+
+      // Deep zoom inner fortress moat & gun embrasures
+      if (z > 2.2) {
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     } else {
       // Walled Town Citadel
       ctx.fillStyle = '#0f172a';
-      ctx.strokeStyle = '#64748b';
+      ctx.strokeStyle = isSelected ? '#fbbf24' : '#64748b';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 8.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
     }
 
-    // Authentic High-Definition Nation Flag Image
+    // Flagpole and Flag
     const flagImg = this.flagImages[p.owner];
-    const flagW = 20;
-    const flagH = 13;
+    const flagW = z > 2.2 ? 22 : 18;
+    const flagH = z > 2.2 ? 14 : 11;
     const flagX = cx - flagW * 0.5;
-    const flagY = cy - 22;
+    const flagY = cy - (z > 2.2 ? 25 : 20);
 
     if (flagImg && flagImg.complete && flagImg.naturalWidth > 0) {
-      // Flagpole
       ctx.strokeStyle = '#d4af37';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -491,23 +649,21 @@ class StrategicCampaignMap {
       ctx.lineTo(flagX, flagY + flagH + 4);
       ctx.stroke();
 
-      // Flag Image with gold border
       ctx.drawImage(flagImg, flagX, flagY, flagW, flagH);
       ctx.strokeStyle = '#d4af37';
       ctx.lineWidth = 1;
       ctx.strokeRect(flagX, flagY, flagW, flagH);
     } else {
-      // Fallback Banner Crest
       ctx.fillStyle = '#fff';
-      ctx.font = '12px "Outfit", sans-serif';
+      ctx.font = '11px "Outfit", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(fac.banner || '⚔️', cx, cy - 14);
     }
 
     // Capital Ribbon Plaque
-    const nameW = Math.max(56, p.capitalName.length * 6.5);
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    const nameW = Math.max(54, p.capitalName.length * 6.2);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
     ctx.strokeStyle = isSelected ? '#fbbf24' : (fac.colors.primary || '#d97706');
     ctx.lineWidth = 1.2;
     ctx.fillRect(cx - nameW * 0.5, cy + 9, nameW, 13);
@@ -518,6 +674,45 @@ class StrategicCampaignMap {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(p.capitalName, cx, cy + 15.5);
+
+    // =========================================================
+    // LOD TIER 3: MICRO FOCUS VIEW (Zoom > 2.2 - Europe Granular)
+    // Render Trade Good, Development Stars & Defense Tags
+    // =========================================================
+    if (z > 2.2) {
+      const tgInfo = tradeLabels[p.tradeGood] || tradeLabels.grain;
+
+      // 1. Trade Good & Yield Pill
+      const pillW = 68;
+      const pillH = 12;
+      const pillX = cx - pillW * 0.5;
+      const pillY = cy + 24;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+      ctx.strokeStyle = tgInfo.color;
+      ctx.lineWidth = 1.0;
+      ctx.fillRect(pillX, pillY, pillW, pillH);
+      ctx.strokeRect(pillX, pillY, pillW, pillH);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 8px "Outfit", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${tgInfo.icon} ${tgInfo.name} • 🪙${p.calculateYield().gold}`, cx, pillY + 6);
+
+      // 2. Development Level Stars Badge
+      const devStars = '★'.repeat(Math.min(5, p.developmentLevel || 1));
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = '9px sans-serif';
+      ctx.fillText(devStars, cx, cy - 28);
+
+      // 3. Garrison Defense Indicator
+      if (p.garrison && p.garrison.length > 0) {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '7.5px "Outfit", sans-serif';
+        ctx.fillText(`🛡️ Levas: ${p.garrison.length * 35}`, cx, pillY + 18);
+      }
+    }
 
     ctx.restore();
   }
