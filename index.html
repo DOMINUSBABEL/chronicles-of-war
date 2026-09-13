@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chronicles of War: Empires of Steel & Powder</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Fullscreen Main Game Canvas (Dual Mode: 4X Strategic Map / RTS Tactical Battlefield) -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- BAROQUE MAIN MENU SCREEN (Age of Empires III & Total War Aesthetic) -->
+  <div id="main-menu-screen" class="menu-overlay">
+    <div class="menu-decor-border">
+      <div class="menu-content">
+        <div class="menu-heraldry">
+          <span class="heraldic-icon">⚜️</span>
+          <span class="heraldic-icon">⚔️</span>
+          <span class="heraldic-icon">👑</span>
+        </div>
+        <h1 class="menu-main-title">CHRONICLES OF WAR</h1>
+        <h2 class="menu-sub-title">EMPIRES OF STEEL & POWDER</h2>
+        <p class="menu-tagline">Simulador Táctico RTS & Gran Campaña Estratégica 4X</p>
+        <div class="menu-divider"></div>
+
+        <div class="menu-buttons">
+          <button class="btn-menu btn-campaign-launch" onclick="launchCampaignFromMenu()">
+            <span class="btn-menu-icon">🌍</span>
+            <div class="btn-menu-text">
+              <span class="btn-menu-title">Gran Campaña 4X</span>
+              <span class="btn-menu-desc">Geopolítica mundial, diplomacia, economía de 4 recursos y conquista en el mapa histórico.</span>
+            </div>
+          </button>
+
+          <button class="btn-menu btn-scenarios-launch" onclick="openHistoricalScenariosModal()">
+            <span class="btn-menu-icon">⚔️</span>
+            <div class="btn-menu-text">
+              <span class="btn-menu-title">Escaramuzas Históricas</span>
+              <span class="btn-menu-desc">Pavía (1525), Rocroi (1643), Sekigahara (1600), Waterloo (1815), Cannas y Agincourt.</span>
+            </div>
+          </button>
+
+          <button class="btn-menu btn-custom-battle-launch" onclick="openCustomBattleModal()">
+            <span class="btn-menu-icon">🏛️</span>
+            <div class="btn-menu-text">
+              <span class="btn-menu-title">Creador de Batallas y Ejércitos</span>
+              <span class="btn-menu-desc">Presupuesto en oro, 10 civilizaciones, regimientos a medida y generador de mapas Empire Earth.</span>
+            </div>
+          </button>
+
+          <button class="btn-menu btn-civ-builder-launch" onclick="openCivBuilderFromMenu()">
+            <span class="btn-menu-icon">👑</span>
+            <div class="btn-menu-text">
+              <span class="btn-menu-title">Forjador de Civilizaciones</span>
+              <span class="btn-menu-desc">Distribuye puntos de civilización (Empire Earth) en doctrinas de infantería, pólvora y comercio.</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="menu-footer">
+          <span>Inspirado en Age of Empires III, Total War y Empire Earth</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Glassmorphism Navigation Bar -->
+  <header class="top-bar glass-panel">
+    <div class="logo-area">
+      <div class="game-title">CHRONICLES OF WAR</div>
+      <div id="mode-indicator" class="era-badge">🌍 Gran Campaña 4X</div>
+      <button id="btn-return-menu" class="btn-return-menu" onclick="returnToMainMenu()">🏛️ Menú</button>
+    </div>
+
+    <!-- Mode Switcher Tabs -->
+    <div class="mode-tabs">
+      <button id="tab-campaign" class="btn-tab active" onclick="switchGameMode('campaign')">🌍 Gran Campaña 4X</button>
+      <button id="tab-rts" class="btn-tab" onclick="switchGameMode('rts')">⚔️ Escaramuza RTS</button>
+    </div>
+
+    <!-- CAMPAIGN 4X HUD -->
+    <div id="campaign-hud" class="campaign-hud-group">
+      <div class="stats-group">
+        <div class="stat-box" title="Tesoro Imperial. Se obtiene mediante impuestos y comercio.">
+          <span class="stat-label">🪙 Oro</span>
+          <span id="camp-gold" class="stat-val" style="color: #fbbf24;">1200</span>
+        </div>
+        <div class="stat-box" title="Graneros y Cosechas. Sostiene al pueblo y mantiene a los ejércitos.">
+          <span class="stat-label">🌾 Alimentos</span>
+          <span id="camp-food" class="stat-val" style="color: #86efac;">800</span>
+        </div>
+        <div class="stat-box" title="Hierro forjado. Vital para fabricar armas pesadas, picas y fundir cañones.">
+          <span class="stat-label">⛏️ Hierro</span>
+          <span id="camp-iron" class="stat-val" style="color: #cbd5e1;">500</span>
+        </div>
+        <div class="stat-box" title="Ciencia y Conocimiento. Generado en Universidades para avanzar de Época.">
+          <span class="stat-label">📜 Ciencia</span>
+          <span id="camp-science" class="stat-val" style="color: #93c5fd;">100</span>
+        </div>
+      </div>
+
+      <div class="campaign-actions">
+        <button id="camp-epoch" class="btn-epoch" onclick="openTechTreeModal()">⚜️ Época III: Renacimiento</button>
+        <button class="btn-camp-action" onclick="openDiplomacyModal()">🤝 Diplomacia</button>
+        <button class="btn-camp-action btn-civ" onclick="openCivBuilderModal()">👑 Civilización</button>
+        <div id="camp-turn" class="turn-label">Turno 1 • Primavera 1525</div>
+        <button id="btn-end-turn" class="btn-end-turn" onclick="window.game.campaign.endTurn()">⌛ Fin de Turno</button>
+      </div>
+    </div>
+
+    <!-- RTS TACTICAL HUD (Hidden when in Campaign mode) -->
+    <div id="rts-hud" class="rts-hud-group" style="display: none;">
+      <div class="stats-group">
+        <div class="stat-box" title="Puntos de Mando (CP). Wargame style: se generan manteniendo zonas y campamentos para solicitar refuerzos tácticos.">
+          <span class="stat-label">📡 Mando (CP)</span>
+          <span id="stat-cp" class="stat-val" style="color: #38bdf8;">100 CP</span>
+        </div>
+        <div class="stat-box" title="Tesoro de Guerra del ejército">
+          <span class="stat-label">🪙 Oro</span>
+          <span id="stat-gold" class="stat-val" style="color: #fbbf24;">500</span>
+        </div>
+        <div class="stat-box" title="Regimientos activos en combate">
+          <span class="stat-label">👥 Regimientos</span>
+          <span class="stat-val"><span id="stat-blue-troops" style="color: #60a5fa;">0</span> vs <span id="stat-red-troops" style="color: #f87171;">0</span></span>
+        </div>
+        <div class="stat-box" title="Control del frente de batalla">
+          <span class="stat-label">⚔️ Frente</span>
+          <span id="stat-territory" class="stat-val" style="color: #cbd5e1;">50% / 50%</span>
+        </div>
+      </div>
+
+      <div class="scenario-controls">
+        <select id="scenario-select" class="dropdown-select" onchange="onScenarioChange(this.value)">
+          <option value="pavia" selected>🏰 Pavía 1525 (Asalto a la Brecha)</option>
+          <option value="agincourt">🏹 Agincourt 1415 (Lodo y Flechas)</option>
+          <option value="cannae">🏛️ Cannas 216 a.C. (Doble Envolvimiento)</option>
+          <option value="waterloo">👑 Waterloo 1815 (Cuadros y Coraceros)</option>
+        </select>
+
+        <select id="era-select" class="dropdown-select" onchange="onEraChange(this.value)">
+          <option value="antiquity">🏛️ Antigüedad Clásica</option>
+          <option value="medieval">🏰 Edad Media</option>
+          <option value="renaissance" selected>⚜️ Renacimiento & Pavía</option>
+          <option value="modern">🦅 Edad Moderna / Siglo XVIII</option>
+          <option value="napoleonic">👑 Siglo XIX / Napoleónico</option>
+        </select>
+      </div>
+
+      <div class="speed-group">
+        <button id="btn-pause" class="btn-icon" onclick="window.game.togglePause()">⏸️ Pausa</button>
+        <button class="btn-icon" onclick="window.game.setGameSpeed(0.5)">0.5x</button>
+        <button class="btn-icon active" onclick="window.game.setGameSpeed(1.0)">1x</button>
+        <button class="btn-icon" onclick="window.game.setGameSpeed(2.0)">2x</button>
+        <button id="btn-audio" class="btn-icon" onclick="toggleSoundUI()">🔊</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Left Sidebar: Province Management (4X Campaign) -->
+  <aside id="province-inspector-panel" class="left-dock" style="display: none;"></aside>
+
+  <!-- Left Sidebar: Selected Brigade Inspector (RTS) -->
+  <aside id="selected-unit-panel" class="left-dock glass-panel" style="display: none;">
+    <div class="no-selection">
+      Ningún regimiento seleccionado.<br>
+      <small>Haz clic en una unidad o arrastra un lazo con el ratón.</small>
+    </div>
+  </aside>
+
+  <!-- Bottom Bar: RTS Recruitment Dock (Hidden in Campaign mode) -->
+  <nav id="rts-recruit-bar" class="bottom-dock glass-panel" style="display: none;">
+    <span class="recruit-title">Reclutar Tropas:</span>
+    <div id="recruit-container" class="recruit-buttons"></div>
+  </nav>
+
+  <!-- Right Lower Dock: Battle & Event Chronicle -->
+  <section class="right-dock glass-panel">
+    <div class="log-title">Crónica de Campaña & Batalla</div>
+    <div id="battle-log-entries"></div>
+  </section>
+
+  <!-- MODAL: Pre-Battle Clash (Total War Style) -->
+  <div id="pre-battle-modal" class="modal-overlay" style="display: none;"></div>
+
+  <!-- MODAL: Post-Battle Debrief & Conquest -->
+  <div id="post-battle-modal" class="modal-overlay" style="display: none;"></div>
+
+  <!-- MODAL: Empire Earth Tech Tree & Epoch Advancement -->
+  <div id="tech-tree-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-window glass-panel">
+      <div class="modal-head">
+        <h2>🏛️ ÁRBOL DE ÉPOCAS (EMPIRE EARTH)</h2>
+        <button class="btn-close" onclick="closeTechTreeModal()">✕</button>
+      </div>
+      <div id="epoch-cards-container" class="epoch-grid"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: Diplomacy (Age of History 3 Style) -->
+  <div id="diplomacy-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-window glass-panel">
+      <div class="modal-head">
+        <h2>🤝 CANCILLERÍA DIPLOMÁTICA</h2>
+        <button class="btn-close" onclick="closeDiplomacyModal()">✕</button>
+      </div>
+      <div id="diplomacy-list-container" class="diplomacy-grid"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: Custom Civilization Builder (Empire Earth Style) -->
+  <div id="civ-builder-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-window glass-panel civ-modal-content">
+      <div class="modal-head">
+        <h2>👑 FORJADOR DE CIVILIZACIONES (EMPIRE EARTH)</h2>
+        <button class="btn-close" onclick="closeCivBuilderModal()">✕</button>
+      </div>
+      <div class="civ-builder-body">
+        <div class="civ-form-row">
+          <div class="form-field">
+            <label>Imperio / Nación:</label>
+            <input type="text" id="civ-name-input" class="input-text" value="Imperio Soberano">
+          </div>
+          <div class="form-field">
+            <label>Soberano / Mariscal:</label>
+            <input type="text" id="civ-leader-input" class="input-text" value="Gran Mariscal">
+          </div>
+          <div class="form-field">
+            <label>Estandarte:</label>
+            <select id="civ-banner-select" class="dropdown-select">
+              <option value="👑" selected>👑 Corona Imperial</option>
+              <option value="🦅">🦅 Águila Bicéfala</option>
+              <option value="🦁">🦁 León Rampante</option>
+              <option value="🐉">🐉 Dragón Celestial</option>
+              <option value="⚔️">⚔️ Espadas de Acero</option>
+              <option value="⚜️">⚜️ Flor de Lis</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Sede Imperial:</label>
+            <select id="civ-capital-select" class="dropdown-select">
+              <option value="castilla" selected>Castilla & León (Madrid)</option>
+              <option value="paris">Île-de-France (París)</option>
+              <option value="london">Inglaterra (Londres)</option>
+              <option value="rome">Estados Pontificios (Roma)</option>
+              <option value="constantinople">Bizancio / Constantinopla</option>
+              <option value="beijing">Imperio Celestial (Pekín)</option>
+              <option value="kyoto">Shogunato (Kioto)</option>
+              <option value="tenochtitlan">Imperio Mexica (Tenochtitlan)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="points-bar-header">
+          <span>PUNTOS DE TALENTO DISPONIBLES:</span>
+          <span id="civ-points-display" class="points-badge">100 / 100</span>
+        </div>
+
+        <div class="talents-grid">
+          <div class="talent-item">
+            <div class="talent-info">
+              <span class="talent-name">⚔️ Furia de Infantería</span>
+              <span id="num-infantry" class="talent-val-badge">15</span>
+            </div>
+            <input type="range" min="0" max="30" value="15" class="talent-slider" oninput="onTalentSliderChange('infantry_power', this.value)">
+            <small>Aumenta daño cuerpo a cuerpo de infantería regular.</small>
+          </div>
+
+          <div class="talent-item">
+            <div class="talent-info">
+              <span class="talent-name">🛡️ Muro de Picas</span>
+              <span id="num-pikes" class="talent-val-badge">15</span>
+            </div>
+            <input type="range" min="0" max="30" value="15" class="talent-slider" oninput="onTalentSliderChange('pikes_defense', this.value)">
+            <small>Refuerza resistencia frontal y letalidad contra caballería.</small>
+          </div>
+
+          <div class="talent-item">
+            <div class="talent-info">
+              <span class="talent-name">💥 Balística y Pólvora</span>
+              <span id="num-powder" class="talent-val-badge">15</span>
+            </div>
+            <input type="range" min="0" max="30" value="15" class="talent-slider" oninput="onTalentSliderChange('powder_ballistics', this.value)">
+            <small>Acelera recarga y amplía rango de arcabuces y mosquetes.</small>
+          </div>
+
+          <div class="talent-item">
+            <div class="talent-info">
+              <span class="talent-name">🐎 Choque de Caballería</span>
+              <span id="num-cavalry" class="talent-val-badge">10</span>
+            </div>
+            <input type="range" min="0" max="30" value="10" class="talent-slider" oninput="onTalentSliderChange('cavalry_shock', this.value)">
+            <small>Potencia el daño por carga y velocidad de los jinetes.</small>
+          </div>
+
+          <div class="talent-item">
+            <div class="talent-info">
+              <span class="talent-name">🪙 Comercio & Aduanas</span>
+              <span id="num-trade" class="talent-val-badge">15</span>
+            </div>
+            <input type="range" min="0" max="30" value="15" class="talent-slider" oninput="onTalentSliderChange('economy_trade', this.value)">
+            <small>Incrementa los ingresos periódicos de Oro imperial.</small>
+          </div>
+
+          <div class="talent-item">
+            <div class="talent-info">
+              <span class="talent-name">🌾 Silos y Cosechas</span>
+              <span id="num-agri" class="talent-val-badge">15</span>
+            </div>
+            <input type="range" min="0" max="30" value="15" class="talent-slider" oninput="onTalentSliderChange('agriculture', this.value)">
+            <small>Mejora la producción agrícola y capacidad de leva.</small>
+          </div>
+
+          <div class="talent-item">
+            <div class="talent-info">
+              <span class="talent-name">⛏️ Metalurgia de Fundición</span>
+              <span id="num-iron" class="talent-val-badge">15</span>
+            </div>
+            <input type="range" min="0" max="30" value="15" class="talent-slider" oninput="onTalentSliderChange('metallurgy', this.value)">
+            <small>Aumenta la extracción de Hierro para cañones y corazas.</small>
+          </div>
+        </div>
+
+        <div class="civ-footer-actions">
+          <button class="btn-battle rts-btn" onclick="applyCustomCivHandler()">
+            🚩 Fundar Civilización y Actualizar Imperio
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Historical Scenarios (Pavía, Rocroi, Sekigahara, Waterloo, Cannas, Agincourt) -->
+  <div id="historical-scenarios-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-window glass-panel" style="max-width: 820px;">
+      <div class="modal-head">
+        <h2>⚔️ ESCARAMUZAS Y BATALLAS HISTÓRICAS</h2>
+        <button class="btn-close" onclick="closeHistoricalScenariosModal()">✕</button>
+      </div>
+      <div class="scenarios-grid">
+        <div class="scenario-card-item" onclick="launchHistoricalScenario('pavia')">
+          <div class="scen-card-header">
+            <span class="scen-card-title">🏰 La Brecha de Pavía (1525)</span>
+            <span class="scen-card-era">Renacimiento</span>
+          </div>
+          <p class="scen-card-desc">El asalto a la brecha del Parque de Mirabello. Los tercios y mangas de arcabuceros españoles de Fernando de Ávalos emboscan a los caballeros de Francisco I de Francia.</p>
+          <button class="scen-card-btn">⚔️ Desplegar Tropas</button>
+        </div>
+
+        <div class="scenario-card-item" onclick="launchHistoricalScenario('rocroi')">
+          <div class="scen-card-header">
+            <span class="scen-card-title">🛡️ Batalla de Rocroi (1643)</span>
+            <span class="scen-card-era">Renacimiento</span>
+          </div>
+          <p class="scen-card-desc">El último gran cuadro de los Tercios de Flandes resiste en solitario ante la artillería envolvente y regimientos reales del Duque de Enghien.</p>
+          <button class="scen-card-btn">⚔️ Desplegar Tropas</button>
+        </div>
+
+        <div class="scenario-card-item" onclick="launchHistoricalScenario('sekigahara')">
+          <div class="scen-card-header">
+            <span class="scen-card-title">⛩️ Batalla de Sekigahara (1600)</span>
+            <span class="scen-card-era">Renacimiento</span>
+          </div>
+          <p class="scen-card-desc">El gran choque que forjó el Shogunato Tokugawa. El Ejército Oriental avanza entre la niebla del monte Sasao contra las huestes leales de Ishida Mitsunari.</p>
+          <button class="scen-card-btn">⚔️ Desplegar Tropas</button>
+        </div>
+
+        <div class="scenario-card-item" onclick="launchHistoricalScenario('waterloo')">
+          <div class="scen-card-header">
+            <span class="scen-card-title">👑 Batalla de Waterloo (1815)</span>
+            <span class="scen-card-era">Napoleónica</span>
+          </div>
+          <p class="scen-card-desc">La cresta de Mont-Saint-Jean. Los cuadros británicos de Wellington resisten las furiosas cargas de coraceros y el avance de la Vieja Guardia Imperial.</p>
+          <button class="scen-card-btn">⚔️ Desplegar Tropas</button>
+        </div>
+
+        <div class="scenario-card-item" onclick="launchHistoricalScenario('cannae')">
+          <div class="scen-card-header">
+            <span class="scen-card-title">🏛️ Batalla de Cannas (216 a.C.)</span>
+            <span class="scen-card-era">Antigüedad</span>
+          </div>
+          <p class="scen-card-desc">La obra maestra del doble envolvimiento táctico. Aníbal Barca retrocede en el centro y cierra la tenaza con la caballería númida sobre las legiones romanas.</p>
+          <button class="scen-card-btn">⚔️ Desplegar Tropas</button>
+        </div>
+
+        <div class="scenario-card-item" onclick="launchHistoricalScenario('agincourt')">
+          <div class="scen-card-header">
+            <span class="scen-card-title">🏹 Batalla de Agincourt (1415)</span>
+            <span class="scen-card-era">Medieval</span>
+          </div>
+          <p class="scen-card-desc">Lluvia de flechas bodkin y fango letal. Los arqueros de tiro largo ingleses de Enrique V protegen sus estacas y diezman la carga de caballería francesa.</p>
+          <button class="scen-card-btn">⚔️ Desplegar Tropas</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Custom Battle & Army Builder (Point-Buy Roster & Empire Earth Maps) -->
+  <div id="custom-battle-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-window glass-panel" style="max-width: 960px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-head">
+        <h2>🏛️ CREADOR DE BATALLAS Y EJÉRCITOS PERSONALIZADOS</h2>
+        <button class="btn-close" onclick="closeCustomBattleModal()">✕</button>
+      </div>
+
+      <div class="custom-battle-layout">
+        <!-- Top Controls: Nations & Budget -->
+        <div class="cb-controls-bar">
+          <div class="cb-control-item">
+            <span class="cb-control-label">👑 Tu Nación / Civilización:</span>
+            <select id="cb-player-nation" class="dropdown-select" onchange="onCBNationChange()">
+              <option value="spain" selected>🇪🇸 Imperio Español</option>
+              <option value="france">⚜️ Reino de Francia</option>
+              <option value="britain">🦁 Reino de Inglaterra</option>
+              <option value="germany">🦅 Sacro Imperio Romano</option>
+              <option value="rome">🏛️ República de Roma</option>
+              <option value="ottoman">🌙 Imperio Otomano</option>
+              <option value="china">🐉 Dinastía Ming</option>
+              <option value="japan">⛩️ Shogunato Tokugawa</option>
+              <option value="persia">🦁 Imperio Safávida</option>
+              <option value="aztec">🦅 Imperio Mexica</option>
+            </select>
+          </div>
+
+          <div class="cb-control-item">
+            <span class="cb-control-label">🪙 Presupuesto de Oro:</span>
+            <div class="cb-budget-buttons">
+              <button class="btn-budget-pill" onclick="onCBBudgetChange(1000)">1000g</button>
+              <button class="btn-budget-pill active" onclick="onCBBudgetChange(2500)">2500g</button>
+              <button class="btn-budget-pill" onclick="onCBBudgetChange(5000)">5000g</button>
+              <button class="btn-budget-pill" onclick="onCBBudgetChange(8000)">8000g</button>
+            </div>
+          </div>
+
+          <div class="cb-control-item">
+            <span class="cb-control-label">⚔️ Nación Enemiga:</span>
+            <select id="cb-enemy-nation" class="dropdown-select" onchange="onCBNationChange()">
+              <option value="france" selected>⚜️ Reino de Francia</option>
+              <option value="spain">🇪🇸 Imperio Español</option>
+              <option value="britain">🦁 Reino de Inglaterra</option>
+              <option value="germany">🦅 Sacro Imperio Romano</option>
+              <option value="rome">🏛️ República de Roma</option>
+              <option value="ottoman">🌙 Imperio Otomano</option>
+              <option value="china">🐉 Dinastía Ming</option>
+              <option value="japan">⛩️ Shogunato Tokugawa</option>
+              <option value="persia">🦁 Imperio Safávida</option>
+              <option value="aztec">🦅 Imperio Mexica</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Environment & Climate Selector (Empire Earth Procedural RMV) -->
+        <div class="cb-env-row">
+          <div class="cb-control-item">
+            <span class="cb-control-label">🗺️ Terreno Procedural (Motor Empire Earth):</span>
+            <select id="cb-map-type" class="dropdown-select">
+              <option value="continental" selected>Continental (Ríos, vados, puentes y recursos)</option>
+              <option value="highlands">Highlands / Tierras Altas (Colinas y pasos estrechos)</option>
+              <option value="mediterranean">Mediterráneo (Bahías y costas marítimas)</option>
+              <option value="plains">Grandes Llanuras (Llanura abierta para choque y maniobra)</option>
+              <option value="siege_breach">Asalto a la Brecha (Muralla bastión con foso)</option>
+            </select>
+          </div>
+
+          <div class="cb-control-item">
+            <span class="cb-control-label">⛅ Clima y Atmósfera:</span>
+            <select id="cb-climate" class="dropdown-select">
+              <option value="temperate" selected>Templado / Pradera europea</option>
+              <option value="arid">Árido / Desértico y estepario</option>
+              <option value="winter">Invernal / Nieve y ventisca</option>
+              <option value="autumn">Otoñal / Niebla y bosque dorado</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Armies Setup Columns -->
+        <div class="cb-armies-grid">
+          <!-- Player Column -->
+          <div class="cb-army-col">
+            <div class="cb-army-header">
+              <span id="cb-player-army-name" class="cb-army-title" style="color: #fbbf24;">Imperio Español</span>
+              <span id="cb-player-cost-badge" class="cb-cost-badge">0 / 2500 Oro</span>
+            </div>
+
+            <span class="cb-control-label">Regimientos Desplegados:</span>
+            <div id="cb-player-roster-list" class="cb-roster-list"></div>
+
+            <span class="cb-control-label">Reclutar Unidades de la Civilización:</span>
+            <div id="cb-player-shop-grid" class="cb-unit-shop-grid"></div>
+          </div>
+
+          <!-- Enemy Column -->
+          <div class="cb-army-col">
+            <div class="cb-army-header">
+              <span id="cb-enemy-army-name" class="cb-army-title" style="color: #ef4444;">Reino de Francia</span>
+              <span id="cb-enemy-cost-badge" class="cb-cost-badge">0 / 2500 Oro</span>
+            </div>
+
+            <span class="cb-control-label">Regimientos Desplegados:</span>
+            <div id="cb-enemy-roster-list" class="cb-roster-list"></div>
+
+            <span class="cb-control-label">Reclutar Unidades de la Civilización:</span>
+            <div id="cb-enemy-shop-grid" class="cb-unit-shop-grid"></div>
+          </div>
+        </div>
+
+        <!-- Launch Button -->
+        <div class="cb-launch-actions">
+          <button class="btn-cb-launch" onclick="launchCustomBattleHandler()">
+            ⚔️ ¡Iniciar Batalla Táctica RTS!
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Scripts in Strict Dependency Order -->
+  <script src="src/core/audio.js"></script>
+  <script src="src/render/smoke_system.js"></script>
+  <script src="src/simulation/ballistics.js"></script>
+  <script src="src/simulation/eras.js"></script>
+  <script src="src/simulation/unit.js"></script>
+  <script src="src/simulation/supply_system.js"></script>
+  <script src="src/simulation/custom_battle_builder.js"></script>
+  <script src="src/map/map_renderer.js"></script>
+  <script src="src/map/territory.js"></script>
+  <script src="src/map/scenarios.js"></script>
+
+  <!-- 4X Campaign Subsystems -->
+  <script src="src/campaign/world_map_data.js"></script>
+  <script src="src/campaign/factions.js"></script>
+  <script src="src/campaign/civ_builder.js"></script>
+  <script src="src/campaign/economy.js"></script>
+  <script src="src/campaign/tech_tree.js"></script>
+  <script src="src/map/procedural_battlefield.js"></script>
+  <script src="src/campaign/campaign_map.js"></script>
+  <script src="src/campaign/army_strategic.js"></script>
+  <script src="src/campaign/battle_bridge.js"></script>
+  <script src="src/campaign/campaign_manager.js"></script>
+
+  <!-- Master Core & Input -->
+  <script src="src/core/input.js"></script>
+  <script src="src/core/engine.js"></script>
+
+  <!-- UI Glue & Logic -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new GameEngine('game-canvas');
+      window.game.init();
+
+      updateRecruitmentButtons(window.game.currentEraKey);
+    });
+
+    function switchGameMode(mode) {
+      if (!window.game) return;
+
+      document.getElementById('tab-campaign').classList.toggle('active', mode === 'campaign');
+      document.getElementById('tab-rts').classList.toggle('active', mode === 'rts');
+
+      const provPanel = document.getElementById('province-inspector-panel');
+      const unitPanel = document.getElementById('selected-unit-panel');
+      const recruitBar = document.getElementById('rts-recruit-bar');
+
+      if (mode === 'campaign') {
+        if (unitPanel) unitPanel.style.display = 'none';
+        if (recruitBar) recruitBar.style.display = 'none';
+      } else {
+        if (provPanel) provPanel.style.display = 'none';
+        if (unitPanel) unitPanel.style.display = 'block';
+        if (recruitBar) recruitBar.style.display = 'flex';
+      }
+
+      window.game.campaign.switchMode(mode);
+    }
+
+    function onScenarioChange(scenarioKey) {
+      if (window.game) {
+        window.game.loadScenario(scenarioKey);
+        document.getElementById('era-select').value = window.game.currentEraKey;
+        updateRecruitmentButtons(window.game.currentEraKey);
+      }
+    }
+
+    function onEraChange(eraKey) {
+      if (window.game) {
+        window.game.setEra(eraKey);
+        updateRecruitmentButtons(eraKey);
+      }
+    }
+
+    function updateRecruitmentButtons(eraKey) {
+      const container = document.getElementById('recruit-container');
+      if (!container || !ERAS[eraKey]) return;
+
+      const eraUnits = ERAS[eraKey].units;
+      let html = '';
+      for (const [key, uDef] of Object.entries(eraUnits)) {
+        const cpCost = Math.round((uDef.cost || 100) * 0.35);
+        html += `
+          <button class="btn-recruit" onclick="window.game.callTacticalReinforcement('${key}')" title="${uDef.desc} (Gasta ${cpCost} CP y despliega desde el borde del mapa)">
+            <span class="recruit-badge-icon">${uDef.badge || '⚔️'}</span>
+            <div class="recruit-info">
+              <span class="recruit-name">${uDef.name}</span>
+              <span class="recruit-cost"><strong style="color: #38bdf8">${cpCost} CP</strong> <small style="color: #fbbf24">(${uDef.cost}g)</small></span>
+            </div>
+          </button>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    function toggleSoundUI() {
+      if (!window.game) return;
+      const isMuted = !window.game.sound.toggleSound();
+      document.getElementById('btn-audio').innerText = isMuted ? '🔇' : '🔊';
+    }
+
+    // --- Tech Tree Modal (Empire Earth) ---
+    function openTechTreeModal() {
+      const modal = document.getElementById('tech-tree-modal');
+      const container = document.getElementById('epoch-cards-container');
+      if (!modal || !container || !window.game) return;
+
+      const playerFaction = window.game.campaign.playerFaction;
+      const curEpoch = window.game.campaign.techTree.getCurrentEpoch(playerFaction);
+      const nextEpoch = window.game.campaign.techTree.getNextEpoch(playerFaction);
+      const res = window.game.campaign.economy.getResources(playerFaction);
+
+      let html = '';
+      EPOCHS.forEach((ep, idx) => {
+        const isCurrent = ep.id === curEpoch.id;
+        const isPast = EPOCHS.findIndex(e => e.id === curEpoch.id) > idx;
+        const isNext = nextEpoch && ep.id === nextEpoch.id;
+
+        html += `
+          <div class="epoch-card ${isCurrent ? 'epoch-current' : (isPast ? 'epoch-past' : '')}">
+            <div class="epoch-card-header">
+              <span class="epoch-icon">${ep.icon}</span>
+              <div>
+                <h3>${ep.name}</h3>
+                <span class="epoch-period">${ep.period}</span>
+              </div>
+            </div>
+            <p class="epoch-desc">${ep.desc}</p>
+            <div class="epoch-unlocks">
+              <strong>Unidades:</strong> ${ep.unlockedUnits.join(', ')}
+            </div>
+            ${isCurrent ? '<div class="epoch-status current">Época Actual</div>' : ''}
+            ${isPast ? '<div class="epoch-status past">Completada</div>' : ''}
+            ${isNext ? `
+              <div class="epoch-cost">
+                <span>Coste: <strong>${ep.scienceCost} Ciencia</strong>, <strong>${ep.goldCost} Oro</strong></span>
+              </div>
+              <button class="btn-advance-epoch" onclick="advanceEpochHandler()">
+                ⭐ Avanzar a esta Época
+              </button>
+            ` : ''}
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      modal.style.display = 'flex';
+    }
+
+    function closeTechTreeModal() {
+      const modal = document.getElementById('tech-tree-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function advanceEpochHandler() {
+      if (!window.game) return;
+      const res = window.game.campaign.techTree.advanceEpoch(
+        window.game.campaign.playerFaction,
+        window.game.campaign.economy,
+        window.game.sound
+      );
+      if (res) {
+        window.game.addLogMessage(`🌟 ¡Tu civilización ha avanzado a la ${res.name}!`);
+        closeTechTreeModal();
+        window.game.campaign.refreshUI();
+      } else {
+        alert('Recursos insuficientes de Ciencia u Oro para avanzar de época.');
+      }
+    }
+
+    // --- Diplomacy Modal (Age of History 3) ---
+    function openDiplomacyModal() {
+      const modal = document.getElementById('diplomacy-modal');
+      const container = document.getElementById('diplomacy-list-container');
+      if (!modal || !container || !window.game) return;
+
+      const playerFac = window.game.campaign.playerFaction;
+      const diplo = window.game.campaign.diplomacy;
+
+      let html = '';
+      Object.keys(FACTIONS).forEach(fKey => {
+        if (fKey === playerFac) return;
+        const fac = FACTIONS[fKey];
+        const rel = diplo.getRelation(playerFac, fKey);
+        const status = diplo.getStatusText(playerFac, fKey);
+
+        html += `
+          <div class="diplo-card">
+            <div class="diplo-header">
+              <span class="diplo-banner">${fac.banner}</span>
+              <div>
+                <h3>${fac.name}</h3>
+                <span class="diplo-leader">${fac.leader}</span>
+              </div>
+            </div>
+            <div class="diplo-status-row">
+              <span>Relación: <strong>${rel}</strong> / 100</span>
+              <span class="status-badge" style="color: ${status.color}; border-color: ${status.color}">${status.text}</span>
+            </div>
+            <div class="diplo-actions">
+              ${diplo.isAtWar(playerFac, fKey) ? `
+                <button class="btn-diplo btn-peace" onclick="proposePeaceHandler('${fKey}')">🕊️ Proponer Paz</button>
+              ` : `
+                <button class="btn-diplo btn-war" onclick="declareWarHandler('${fKey}')">⚔️ Declarar Guerra</button>
+                <button class="btn-diplo btn-alliance" onclick="formAllianceHandler('${fKey}')">🤝 Alianza Militar</button>
+              `}
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      modal.style.display = 'flex';
+    }
+
+    function closeDiplomacyModal() {
+      const modal = document.getElementById('diplomacy-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function declareWarHandler(targetFac) {
+      window.game.campaign.diplomacy.declareWar(window.game.campaign.playerFaction, targetFac);
+      window.game.sound.playTrumpetCall();
+      window.game.addLogMessage(`⚔️ ¡Has declarado la guerra a ${FACTIONS[targetFac].name}!`);
+      openDiplomacyModal();
+    }
+
+    function proposePeaceHandler(targetFac) {
+      window.game.campaign.diplomacy.proposePeace(window.game.campaign.playerFaction, targetFac);
+      window.game.sound.playMarchDrums();
+      window.game.addLogMessage(`🕊️ Se ha firmado un tratado de paz con ${FACTIONS[targetFac].name}.`);
+      openDiplomacyModal();
+    }
+
+    function formAllianceHandler(targetFac) {
+      window.game.campaign.diplomacy.formAlliance(window.game.campaign.playerFaction, targetFac);
+      window.game.sound.playTrumpetCall();
+      window.game.addLogMessage(`🤝 ¡Alianza militar sellada con ${FACTIONS[targetFac].name}!`);
+      openDiplomacyModal();
+    }
+
+    // --- Custom Civilization Builder Modal (Empire Earth) ---
+    function openCivBuilderModal() {
+      const modal = document.getElementById('civ-builder-modal');
+      if (!modal || !window.game || !window.game.campaign.civBuilder) return;
+      updateCivBuilderUI();
+      modal.style.display = 'flex';
+    }
+
+    function closeCivBuilderModal() {
+      const modal = document.getElementById('civ-builder-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function onTalentSliderChange(talentKey, val) {
+      if (!window.game || !window.game.campaign.civBuilder) return;
+      const builder = window.game.campaign.civBuilder;
+      const success = builder.setTalent(talentKey, val);
+      updateCivBuilderUI();
+    }
+
+    function updateCivBuilderUI() {
+      if (!window.game || !window.game.campaign.civBuilder) return;
+      const builder = window.game.campaign.civBuilder;
+      const talents = builder.customCiv.talents;
+
+      const pDisplay = document.getElementById('civ-points-display');
+      if (pDisplay) {
+        const remaining = builder.totalPoints - builder.spentPoints;
+        pDisplay.innerText = `${remaining} / ${builder.totalPoints}`;
+        pDisplay.style.color = remaining >= 0 ? '#fbbf24' : '#ef4444';
+      }
+
+      const mapVal = {
+        infantry_power: 'num-infantry',
+        pikes_defense: 'num-pikes',
+        powder_ballistics: 'num-powder',
+        cavalry_shock: 'num-cavalry',
+        economy_trade: 'num-trade',
+        agriculture: 'num-agri',
+        metallurgy: 'num-iron'
+      };
+
+      for (const [k, id] of Object.entries(mapVal)) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = talents[k] || 0;
+      }
+    }
+
+    function applyCustomCivHandler() {
+      if (!window.game || !window.game.campaign.civBuilder) return;
+      const builder = window.game.campaign.civBuilder;
+
+      const nameInp = document.getElementById('civ-name-input');
+      const leaderInp = document.getElementById('civ-leader-input');
+      const bannerSel = document.getElementById('civ-banner-select');
+      const capSel = document.getElementById('civ-capital-select');
+
+      if (nameInp) builder.customCiv.name = nameInp.value || 'Imperio Soberano';
+      if (leaderInp) builder.customCiv.leader = leaderInp.value || 'Gran Mariscal';
+      if (bannerSel) builder.customCiv.banner = bannerSel.value;
+      if (capSel) builder.customCiv.capitalProvince = capSel.value;
+
+      builder.applyCustomCiv();
+      closeCivBuilderModal();
+      window.game.sound.playTrumpetCall();
+    }
+
+    // --- MAIN MENU HANDLERS ---
+    function launchCampaignFromMenu() {
+      const menuEl = document.getElementById('main-menu-screen');
+      if (menuEl) menuEl.style.display = 'none';
+      if (!window.game) return;
+
+      window.game.gameState = 'game';
+      switchGameMode('campaign');
+      window.game.sound.playTrumpetCall();
+      window.game.addLogMessage('🌍 ¡Gran Campaña iniciada! Comanda a tus ejércitos y expande tu imperio.');
+    }
+
+    function returnToMainMenu() {
+      const menuEl = document.getElementById('main-menu-screen');
+      if (menuEl) menuEl.style.display = 'flex';
+      if (window.game) window.game.gameState = 'menu';
+    }
+
+    function openCivBuilderFromMenu() {
+      const menuEl = document.getElementById('main-menu-screen');
+      if (menuEl) menuEl.style.display = 'none';
+      if (window.game) {
+        window.game.gameState = 'game';
+        switchGameMode('campaign');
+      }
+      openCivBuilderModal();
+    }
+
+    // --- HISTORICAL SCENARIOS HANDLERS ---
+    function openHistoricalScenariosModal() {
+      const modal = document.getElementById('historical-scenarios-modal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeHistoricalScenariosModal() {
+      const modal = document.getElementById('historical-scenarios-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function launchHistoricalScenario(scenarioKey) {
+      closeHistoricalScenariosModal();
+      const menuEl = document.getElementById('main-menu-screen');
+      if (menuEl) menuEl.style.display = 'none';
+
+      if (!window.game) return;
+      window.game.gameState = 'game';
+      window.game.loadScenario(scenarioKey);
+      switchGameMode('rts');
+      document.getElementById('scenario-select').value = scenarioKey;
+      document.getElementById('era-select').value = window.game.currentEraKey;
+      updateRecruitmentButtons(window.game.currentEraKey);
+      window.game.sound.playTrumpetCall();
+    }
+
+    // --- CUSTOM BATTLE BUILDER HANDLERS ---
+    function openCustomBattleModal() {
+      const modal = document.getElementById('custom-battle-modal');
+      if (!modal || !window.game || !window.game.customBattleBuilder) return;
+
+      const builder = window.game.customBattleBuilder;
+      document.getElementById('cb-player-nation').value = builder.playerNation;
+      document.getElementById('cb-enemy-nation').value = builder.enemyNation;
+
+      updateCustomBattleUI();
+      modal.style.display = 'flex';
+    }
+
+    function closeCustomBattleModal() {
+      const modal = document.getElementById('custom-battle-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function onCBBudgetChange(budget) {
+      if (!window.game || !window.game.customBattleBuilder) return;
+      window.game.customBattleBuilder.setBudget(budget);
+
+      // Update active button state
+      const buttons = document.querySelectorAll('.btn-budget-pill');
+      buttons.forEach(b => {
+        b.classList.toggle('active', parseInt(b.innerText) === budget);
+      });
+
+      updateCustomBattleUI();
+    }
+
+    function onCBNationChange() {
+      if (!window.game || !window.game.customBattleBuilder) return;
+      const pNat = document.getElementById('cb-player-nation').value;
+      const eNat = document.getElementById('cb-enemy-nation').value;
+      window.game.customBattleBuilder.setNations(pNat, eNat);
+      updateCustomBattleUI();
+    }
+
+    function onCBAddUnit(side, unitKey) {
+      if (!window.game || !window.game.customBattleBuilder) return;
+      window.game.customBattleBuilder.addUnitToRoster(side, unitKey);
+      updateCustomBattleUI();
+    }
+
+    function onCBRemoveUnit(side, unitKey) {
+      if (!window.game || !window.game.customBattleBuilder) return;
+      window.game.customBattleBuilder.removeUnitFromRoster(side, unitKey);
+      updateCustomBattleUI();
+    }
+
+    function updateCustomBattleUI() {
+      if (!window.game || !window.game.customBattleBuilder) return;
+      const builder = window.game.customBattleBuilder;
+      const pNatDef = NATION_ROSTERS[builder.playerNation];
+      const eNatDef = NATION_ROSTERS[builder.enemyNation];
+
+      // 1. Army Headers & Costs
+      const pCost = builder.getPlayerCost();
+      const eCost = builder.getEnemyCost();
+      const pBadge = document.getElementById('cb-player-cost-badge');
+      const eBadge = document.getElementById('cb-enemy-cost-badge');
+      const pTitle = document.getElementById('cb-player-army-name');
+      const eTitle = document.getElementById('cb-enemy-army-name');
+
+      if (pTitle) pTitle.innerText = `${pNatDef.banner} ${pNatDef.name}`;
+      if (eTitle) eTitle.innerText = `${eNatDef.banner} ${eNatDef.name}`;
+
+      if (pBadge) {
+        pBadge.innerText = `${pCost} / ${builder.budget} Oro`;
+        pBadge.style.color = pCost <= builder.budget ? '#86efac' : '#ef4444';
+      }
+      if (eBadge) {
+        eBadge.innerText = `${eCost} / ${builder.budget} Oro`;
+        eBadge.style.color = eCost <= builder.budget ? '#86efac' : '#ef4444';
+      }
+
+      // 2. Render Roster Lists
+      const pRosterEl = document.getElementById('cb-player-roster-list');
+      const eRosterEl = document.getElementById('cb-enemy-roster-list');
+
+      const renderRoster = (roster, side) => {
+        if (!roster || roster.length === 0) {
+          return '<div style="color: #64748b; font-size: 0.8rem; padding: 10px;">Ningún regimiento desplegado. Haz clic en las unidades abajo para añadir.</div>';
+        }
+        return roster.map(item => `
+          <div class="cb-roster-item">
+            <div class="cb-roster-item-info">
+              <span>${item.icon || '⚔️'}</span>
+              <span><strong>${item.name}</strong></span>
+              <span style="color: #fbbf24; font-size: 0.75rem;">(${item.cost}g c/u)</span>
+            </div>
+            <div class="cb-roster-controls">
+              <button class="btn-roster-mod" onclick="onCBRemoveUnit('${side}', '${item.key}')">-</button>
+              <span style="font-family: 'Outfit'; font-weight: 800; min-width: 18px; text-align: center;">${item.count}</span>
+              <button class="btn-roster-mod" onclick="onCBAddUnit('${side}', '${item.key}')">+</button>
+            </div>
+          </div>
+        `).join('');
+      };
+
+      if (pRosterEl) pRosterEl.innerHTML = renderRoster(builder.playerRoster, 'player');
+      if (eRosterEl) eRosterEl.innerHTML = renderRoster(builder.enemyRoster, 'enemy');
+
+      // 3. Render Available Unit Shop Cards
+      const pShopEl = document.getElementById('cb-player-shop-grid');
+      const eShopEl = document.getElementById('cb-enemy-shop-grid');
+
+      const renderShop = (units, side) => {
+        return units.map(u => `
+          <div class="cb-shop-card" onclick="onCBAddUnit('${side}', '${u.key}')" title="${u.desc}">
+            <div class="cb-shop-top">
+              <span>${u.icon || '⚔️'} ${u.name}</span>
+              <span class="cb-shop-cost">${u.cost}g</span>
+            </div>
+            <span class="cb-shop-desc">${u.desc}</span>
+          </div>
+        `).join('');
+      };
+
+      if (pShopEl && pNatDef.units) pShopEl.innerHTML = renderShop(pNatDef.units, 'player');
+      if (eShopEl && eNatDef.units) eShopEl.innerHTML = renderShop(eNatDef.units, 'enemy');
+    }
+
+    function launchCustomBattleHandler() {
+      if (!window.game || !window.game.customBattleBuilder) return;
+      const builder = window.game.customBattleBuilder;
+
+      const mapType = document.getElementById('cb-map-type').value || 'continental';
+      const climate = document.getElementById('cb-climate').value || 'temperate';
+
+      builder.setEnvironment(mapType, climate);
+      builder.launchBattle();
+
+      closeCustomBattleModal();
+      const menuEl = document.getElementById('main-menu-screen');
+      if (menuEl) menuEl.style.display = 'none';
+      window.game.gameState = 'game';
+    }
+  </script>
+
+</body>
+</html>
