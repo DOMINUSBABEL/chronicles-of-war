@@ -569,22 +569,45 @@ class Unit {
       }
       if (audio) audio.playArrowVolley(pan);
     } else {
-      // Gunpowder Volley (Arquebus, Musket, Tercio Sleeves)
-      const firingSoldiers = Math.min(18, Math.ceil(this.currentSoldiers * 0.45));
-      for (let i = 0; i < firingSoldiers; i++) {
-        const s = this.soldiers[i % this.currentSoldiers];
-        const sx = s ? s.worldX : this.x;
-        const sy = s ? s.worldY : this.y;
-        if (s) s.muzzleFlashTimer = 0.18; // Trigger muzzle flash!
-        const spread = this.def.weaponType === 'rifle' ? 0.08 : 0.25;
-        ballistics.fireMusket(sx, sy, fireAngle, this.range, spread, this.team, this, this.rangedDamage * damageBonus);
+      // Gunpowder Volley with Dutch & Spanish Counter-march (Contramarcha rotativa por filas)
+      if (this.currentFiringRank === undefined) this.currentFiringRank = 0;
+      const rankToFire = this.currentFiringRank;
+
+      // Find living soldiers in current firing rank, or fallback to any available
+      let firingRankSoldiers = this.soldiers.filter((s, idx) => idx < this.currentSoldiers && s.rank === rankToFire && (!s.isTercioArquebus !== undefined));
+      if (firingRankSoldiers.length === 0) {
+        firingRankSoldiers = this.soldiers.slice(0, Math.min(16, this.currentSoldiers));
       }
 
+      firingRankSoldiers.forEach(s => {
+        const sx = s ? s.worldX : this.x;
+        const sy = s ? s.worldY : this.y;
+        if (s) {
+          s.muzzleFlashTimer = 0.22;
+          s.state = 'firing';
+        }
+        const spread = this.def.weaponType === 'rifle' ? 0.07 : 0.22;
+        ballistics.fireMusket(sx, sy, fireAngle, this.range, spread, this.team, this, this.rangedDamage * damageBonus);
+        if (particles && Math.random() < 0.4) {
+          particles.emitMusketSmoke(sx, sy, fireAngle, 0.35);
+        }
+      });
+
+      // Put non-firing ranks in reloading stance with ramrods
+      this.soldiers.forEach((s, idx) => {
+        if (idx < this.currentSoldiers && s.rank !== rankToFire) {
+          s.state = 'reloading';
+        }
+      });
+
+      // Rotate to next rank for the upcoming volley
+      this.currentFiringRank = (this.currentFiringRank + 1) % this.totalRanks;
+
       if (particles) {
-        particles.emitMusketSmoke(this.x, this.y, fireAngle, 0.45);
+        particles.emitMusketSmoke(this.x, this.y, fireAngle, 0.55);
       }
       if (audio) {
-        audio.playMusketVolley(pan, Math.min(8, firingSoldiers));
+        audio.playMusketVolley(pan, Math.min(10, firingRankSoldiers.length));
       }
     }
 
