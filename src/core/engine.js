@@ -28,6 +28,9 @@ class GameEngine {
     if (typeof CustomBattleBuilder !== 'undefined') {
       this.customBattleBuilder = new CustomBattleBuilder(this);
     }
+    if (typeof P2PNetworkManager !== 'undefined') {
+      this.p2p = new P2PNetworkManager(this);
+    }
 
     // State
     this.gameState = 'menu'; // 'menu', 'game'
@@ -247,7 +250,13 @@ class GameEngine {
       const row = Math.floor(idx / cols);
       const offsetX = (col - (cols - 1) / 2) * spacing;
       const offsetY = row * spacing;
-      u.setTarget(targetX + offsetX, targetY + offsetY, addWaypoint);
+      const finalX = targetX + offsetX;
+      const finalY = targetY + offsetY;
+      u.setTarget(finalX, finalY, addWaypoint);
+
+      if (this.p2p && this.p2p.isConnected && !u.isSupplyTrain) {
+        this.p2p.sendOrderMove(u.id, finalX, finalY, addWaypoint);
+      }
     });
   }
 
@@ -269,13 +278,22 @@ class GameEngine {
       const targetY = startY + lineDy * t;
       u.setTarget(targetX, targetY);
       u.targetAngle = faceAngle;
+
+      if (this.p2p && this.p2p.isConnected && !u.isSupplyTrain) {
+        this.p2p.sendOrderMove(u.id, targetX, targetY, false);
+      }
     });
 
     this.addLogMessage(`🛡️ Desplegando ${count} regimiento(s) en línea de batalla.`);
   }
 
   setFormationForSelected(formation) {
-    this.selectedUnits.forEach(u => u.setFormation(formation));
+    this.selectedUnits.forEach(u => {
+      u.setFormation(formation);
+      if (this.p2p && this.p2p.isConnected && !u.isSupplyTrain) {
+        this.p2p.sendOrderFormation(u.id, formation);
+      }
+    });
     this.addLogMessage(`📐 Formación cambiada a: ${formation.toUpperCase()}`);
     this._updateSelectionUI();
   }
@@ -612,7 +630,12 @@ class GameEngine {
   }
 
   setDoctrineForSelected(doctrineKey) {
-    this.selectedUnits.forEach(u => u.setDoctrine(doctrineKey));
+    this.selectedUnits.forEach(u => {
+      u.setDoctrine(doctrineKey);
+      if (this.p2p && this.p2p.isConnected && !u.isSupplyTrain) {
+        this.p2p.sendOrderDoctrine(u.id, doctrineKey);
+      }
+    });
     this.addLogMessage(`⚔️ Doctrina táctica ordenada: ${doctrineKey.toUpperCase()}`);
     this._updateSelectionUI();
   }
@@ -620,6 +643,9 @@ class GameEngine {
   callTacticalReinforcement(unitKey) {
     if (this.supplySystem) {
       this.supplySystem.callPlayerReinforcement(unitKey);
+      if (this.p2p && this.p2p.isConnected) {
+        this.p2p.sendCallReinforcement(this.currentEraKey, unitKey);
+      }
     }
   }
 

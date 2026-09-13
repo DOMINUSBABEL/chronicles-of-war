@@ -57,6 +57,22 @@
               <span class="btn-menu-desc">Distribuye puntos de civilización (Empire Earth) en doctrinas de infantería, pólvora y comercio.</span>
             </div>
           </button>
+
+          <button class="btn-menu btn-codex-launch" onclick="window.codexBellum.open()">
+            <span class="btn-menu-icon">📖</span>
+            <div class="btn-menu-text">
+              <span class="btn-menu-title">Codex Bellum (Enciclopedia)</span>
+              <span class="btn-menu-desc">Manual de armas combinadas, compendio de 18+ regimientos, logística militar y gran estrategia 4X.</span>
+            </div>
+          </button>
+
+          <button class="btn-menu btn-multiplayer-launch" onclick="openP2PModal()">
+            <span class="btn-menu-icon">🌐</span>
+            <div class="btn-menu-text">
+              <span class="btn-menu-title">Multijugador P2P WebRTC</span>
+              <span class="btn-menu-desc">Batallas tácticas 1v1 directas entre navegadores sin coste de servidor dedicado.</span>
+            </div>
+          </button>
         </div>
 
         <div class="menu-footer">
@@ -105,6 +121,8 @@
         <button id="camp-epoch" class="btn-epoch" onclick="openTechTreeModal()">⚜️ Época III: Renacimiento</button>
         <button class="btn-camp-action" onclick="openDiplomacyModal()">🤝 Diplomacia</button>
         <button class="btn-camp-action btn-civ" onclick="openCivBuilderModal()">👑 Civilización</button>
+        <button class="btn-camp-action" onclick="window.codexBellum.open()" title="Tratados de Táctica & Enciclopedia">📖 Codex</button>
+        <button class="btn-camp-action" onclick="openP2PModal()" title="Multijugador P2P WebRTC">🌐 P2P</button>
         <div id="camp-turn" class="turn-label">Turno 1 • Primavera 1525</div>
         <button id="btn-end-turn" class="btn-end-turn" onclick="window.game.campaign.endTurn()">⌛ Fin de Turno</button>
       </div>
@@ -154,10 +172,33 @@
         <button class="btn-icon active" onclick="window.game.setGameSpeed(1.0)">1x</button>
         <button class="btn-icon" onclick="window.game.setGameSpeed(2.0)">2x</button>
         <button id="btn-tactical-drawer-toggle" class="btn-icon btn-tactical-toggle" onclick="window.game.toggleTacticalDrawer()" title="Desplegar Puesto de Mando Táctico">⚜️ Estado Mayor ⏷</button>
+        <button class="btn-icon" onclick="window.codexBellum.open()" title="Abrir Codex Bellum">📖</button>
+        <button class="btn-icon" onclick="openP2PModal()" title="Multijugador P2P">🌐</button>
         <button id="btn-audio" class="btn-icon" onclick="toggleSoundUI()">🔊</button>
       </div>
     </div>
   </header>
+
+  <!-- 4X THEATER NAVIGATION & MAPMODES FLOATING BAR (Age of History 3) -->
+  <nav id="campaign-theaters-bar" class="campaign-theaters-bar" aria-label="Navegación de Teatros 4X">
+    <div class="theaters-cluster">
+      <span class="theater-label">🗺️ Teatros:</span>
+      <button class="btn-theater-pill" onclick="window.game.campaign.flyToTheater('europe')" title="Foco granular en Europa Central">🇪🇺 Europa</button>
+      <button class="btn-theater-pill" onclick="window.game.campaign.flyToTheater('flanders')" title="Flandes, Países Bajos y Rin">⚔️ Flandes</button>
+      <button class="btn-theater-pill" onclick="window.game.campaign.flyToTheater('spain')" title="Península Ibérica e Italia">👑 Iberia</button>
+      <button class="btn-theater-pill" onclick="window.game.campaign.flyToTheater('americas')" title="Virreinatos de Indias">🌎 Américas</button>
+      <button class="btn-theater-pill" onclick="window.game.campaign.flyToTheater('asia')" title="Imperio Ming y Sengoku Japón">🏯 Asia</button>
+      <button class="btn-theater-pill" onclick="window.game.campaign.flyToTheater('mena')" title="Levante, Otomanos y Egipto">🌍 MENA</button>
+      <button class="btn-theater-pill" onclick="window.game.campaign.flyToTheater('global')" title="Vista global del orbe">🌐 Global</button>
+    </div>
+    <div class="mapmodes-cluster">
+      <span class="theater-label">Modo:</span>
+      <button id="mm-btn-political" class="btn-mapmode-pill active" onclick="setMapModeUI('political')">🏳️ Político</button>
+      <button id="mm-btn-development" class="btn-mapmode-pill" onclick="setMapModeUI('development')">📈 Desarrollo</button>
+      <button id="mm-btn-trade" class="btn-mapmode-pill" onclick="setMapModeUI('trade')">📦 Bienes</button>
+      <button id="mm-btn-military" class="btn-mapmode-pill" onclick="setMapModeUI('military')">🛡️ Fortalezas</button>
+    </div>
+  </nav>
 
   <!-- TOP SLIDING DRAWER: Baroque Grand Tactical Command Suite -->
   <section id="tactical-command-drawer" class="glass-panel tactical-drawer">
@@ -632,6 +673,70 @@
     </div>
   </div>
 
+  <!-- MODAL: Codex Bellum (Enciclopedia Histórica & Manual) -->
+  <div id="codex-bellum-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-window codex-window glass-panel">
+      <div class="modal-head">
+        <h2>📖 CODEX BELLUM • TRATADOS DE GUERRA & IMPERIO</h2>
+        <button class="btn-close" onclick="window.codexBellum.close()">✕</button>
+      </div>
+      <div class="codex-layout">
+        <!-- Volumes Navigation Tabs -->
+        <div id="codex-vol-nav" class="codex-vol-nav"></div>
+
+        <div class="codex-main-split">
+          <!-- Chapters List Sidebar -->
+          <div id="codex-chap-nav" class="codex-chap-nav"></div>
+
+          <!-- Reading Parchment Content Pane -->
+          <div id="codex-reading-content" class="codex-reading-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: P2P WebRTC Multiplayer -->
+  <div id="p2p-multiplayer-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-window glass-panel" style="max-width: 640px;">
+      <div class="modal-head">
+        <h2>🌐 MULTIJUGADOR P2P WEBRTC (SIN SERVIDOR)</h2>
+        <button class="btn-close" onclick="closeP2PModal()">✕</button>
+      </div>
+      <div class="p2p-layout" style="padding: 16px;">
+        <div class="p2p-tabs" style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <button id="btn-p2p-tab-host" class="btn-tab active" onclick="switchP2PTab('host')">👑 Crear Sala (Anfitrión)</button>
+          <button id="btn-p2p-tab-join" class="btn-tab" onclick="switchP2PTab('join')">⚔️ Unirse a Sala (Invitado)</button>
+        </div>
+
+        <div id="p2p-host-view">
+          <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 12px;">
+            Genera un código de sala para combatir en tiempo real contra otro jugador en red local o Internet.
+          </p>
+          <button class="btn-action" onclick="onP2PCreateHost()">🎲 Generar Sala Anfitrión</button>
+        </div>
+
+        <div id="p2p-join-view" style="display: none;">
+          <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 8px;">
+            Pega aquí el código provisto por el anfitrión para conectarte a su batalla:
+          </p>
+          <textarea id="p2p-join-input" class="p2p-textarea" rows="3" placeholder="Pega aquí el código del Anfitrión..."></textarea>
+          <button class="btn-action" style="margin-top: 8px;" onclick="onP2PJoinRoom()">🚀 Conectar a Sala</button>
+        </div>
+
+        <div class="p2p-exchange-box" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+          <div id="p2p-status-msg" style="color: #fbbf24; font-size: 13px; font-weight: bold; margin-bottom: 8px;">
+            ⚪ Esperando acción...
+          </div>
+          <textarea id="p2p-exchange-code" class="p2p-textarea" rows="4" readonly placeholder="Tu código de conexión aparecerá aquí..."></textarea>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button class="btn-action" onclick="copyP2PCode()">📋 Copiar Código</button>
+            <button id="btn-p2p-confirm-answer" class="btn-action" style="display: none;" onclick="onP2PConfirmAnswer()">✅ Confirmar Respuesta de Invitado</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Game Scripts in Strict Dependency Order -->
   <script src="src/core/audio.js"></script>
   <script src="src/render/smoke_system.js"></script>
@@ -656,6 +761,10 @@
   <script src="src/campaign/battle_bridge.js"></script>
   <script src="src/campaign/campaign_manager.js"></script>
 
+  <!-- UI & Networking Extensions -->
+  <script src="src/net/p2p_network.js"></script>
+  <script src="src/ui/codex_bellum.js"></script>
+
   <!-- Master Core & Input -->
   <script src="src/core/input.js"></script>
   <script src="src/core/engine.js"></script>
@@ -678,17 +787,88 @@
       const provPanel = document.getElementById('province-inspector-panel');
       const unitPanel = document.getElementById('selected-unit-panel');
       const recruitBar = document.getElementById('rts-recruit-bar');
+      const theatersBar = document.getElementById('campaign-theaters-bar');
 
       if (mode === 'campaign') {
         if (unitPanel) unitPanel.style.display = 'none';
         if (recruitBar) recruitBar.style.display = 'none';
+        if (theatersBar) theatersBar.style.display = 'flex';
       } else {
         if (provPanel) provPanel.style.display = 'none';
         if (unitPanel) unitPanel.style.display = 'block';
         if (recruitBar) recruitBar.style.display = 'flex';
+        if (theatersBar) theatersBar.style.display = 'none';
       }
 
       window.game.campaign.switchMode(mode);
+    }
+
+    function setMapModeUI(mode) {
+      if (!window.game || !window.game.campaign) return;
+      window.game.campaign.setMapMode(mode);
+      ['political', 'development', 'trade', 'military'].forEach(m => {
+        const btn = document.getElementById(`mm-btn-${m}`);
+        if (btn) btn.classList.toggle('active', m === mode);
+      });
+    }
+
+    function openP2PModal() {
+      const modal = document.getElementById('p2p-multiplayer-modal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeP2PModal() {
+      const modal = document.getElementById('p2p-multiplayer-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function switchP2PTab(tab) {
+      const isHost = tab === 'host';
+      document.getElementById('btn-p2p-tab-host').classList.toggle('active', isHost);
+      document.getElementById('btn-p2p-tab-join').classList.toggle('active', !isHost);
+      document.getElementById('p2p-host-view').style.display = isHost ? 'block' : 'none';
+      document.getElementById('p2p-join-view').style.display = isHost ? 'none' : 'block';
+      document.getElementById('btn-p2p-confirm-answer').style.display = isHost ? 'inline-block' : 'none';
+    }
+
+    function onP2PCreateHost() {
+      if (window.game && window.game.p2p) {
+        window.game.p2p.createHostRoom();
+        document.getElementById('btn-p2p-confirm-answer').style.display = 'inline-block';
+      }
+    }
+
+    function onP2PJoinRoom() {
+      const code = document.getElementById('p2p-join-input').value;
+      if (window.game && window.game.p2p && code) {
+        window.game.p2p.joinRoomWithCode(code);
+      }
+    }
+
+    function onP2PConfirmAnswer() {
+      const code = document.getElementById('p2p-join-input').value;
+      if (window.game && window.game.p2p && code) {
+        window.game.p2p.confirmGuestAnswer(code);
+      }
+    }
+
+    function copyP2PCode() {
+      const codeArea = document.getElementById('p2p-exchange-code');
+      if (codeArea && codeArea.value) {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(codeArea.value).then(() => {
+            alert('¡Código copiado al portapapeles! Compártelo con tu rival.');
+          }).catch(() => {
+            codeArea.select();
+            document.execCommand('copy');
+            alert('¡Código copiado!');
+          });
+        } else {
+          codeArea.select();
+          document.execCommand('copy');
+          alert('¡Código copiado!');
+        }
+      }
     }
 
     function onScenarioChange(scenarioKey) {
