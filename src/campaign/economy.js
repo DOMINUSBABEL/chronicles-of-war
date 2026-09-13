@@ -78,8 +78,9 @@ class EconomyManager {
       let armyUpkeepFood = 0;
 
       const taxMod = this.getTaxMultiplier(fId);
+      const uniqueTradeGoods = new Set();
 
-      // 1. Province Income
+      // 1. Province Income & Trade Diversity
       provinces.forEach(p => {
         if (p.owner === fId) {
           const pYield = p.calculateYield();
@@ -87,6 +88,7 @@ class EconomyManager {
           incomeFood += pYield.food;
           incomeIron += pYield.iron;
           incomeScience += pYield.science;
+          if (p.tradeGood) uniqueTradeGoods.add(p.tradeGood);
 
           // Faction traits bonuses
           if (fId === 'spain' && p.hasPort) incomeGold += 60;
@@ -96,12 +98,22 @@ class EconomyManager {
         }
       });
 
-      // 2. Army Upkeep Costs (War of Dots maintenance)
+      // Trade Monopoly & Commercial Network Bonus (AoH3 / Victoria style)
+      if (uniqueTradeGoods.size >= 4) {
+        incomeGold += Math.round(incomeGold * 0.18); // +18% trade monopoly
+      }
+
+      // 2. Army Upkeep Costs & Distance Logistics (War of Dots / Wargame)
       armies.forEach(a => {
         if (a.faction === fId && a.isAlive) {
+          // Check if army is deployed in foreign / enemy soil (logistical strain)
+          const currentProv = provinces.find(p => p.id === a.provinceId);
+          const isForeignSoil = currentProv && currentProv.owner !== fId;
+          const logisticsMultiplier = isForeignSoil ? 1.35 : 1.0;
+
           a.regiments.forEach(reg => {
-            armyUpkeepGold += (reg.cost || 200) * 0.08;
-            armyUpkeepFood += 15;
+            armyUpkeepGold += (reg.cost || 200) * 0.08 * logisticsMultiplier;
+            armyUpkeepFood += 15 * logisticsMultiplier;
           });
         }
       });
