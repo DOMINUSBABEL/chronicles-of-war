@@ -573,7 +573,7 @@ body, html {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 350;
 }
 
 .modal-window {
@@ -2076,5 +2076,66 @@ body, html {
   box-sizing: border-box;
 }
 
+/* =========================================================
+   3D GLOBE PROJECTION & VIEW TOGGLE
+   ========================================================= */
+#globe-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  display: none;
+  background: radial-gradient(circle at center, #0a0f1d 0%, #030712 100%);
+  overflow: hidden;
+}
 
+.btn-view-toggle {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+  border: 1px solid #38bdf8;
+  color: #38bdf8;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
 
+.btn-view-toggle:hover {
+  background: #38bdf8;
+  color: #0f172a;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+}
+
+.btn-view-toggle.active {
+  background: #0284c7;
+  color: #fff;
+  border-color: #7dd3fc;
+}
+
+/* Top bar quick launch actions */
+.btn-quick-launch {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f8fafc;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-quick-launch:hover {
+  background: rgba(217, 119, 6, 0.25);
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
