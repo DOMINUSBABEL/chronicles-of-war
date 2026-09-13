@@ -103,9 +103,23 @@ class CampaignManager {
     const campHUD = document.getElementById('campaign-hud');
     const rtsHUD = document.getElementById('rts-hud');
     const modeBadge = document.getElementById('mode-indicator');
+    const theatersBar = document.getElementById('campaign-theaters-bar');
+    const provPanel = document.getElementById('province-inspector-panel');
+    const unitPanel = document.getElementById('selected-unit-panel');
+    const recruitBar = document.getElementById('rts-recruit-bar');
+    const tabCamp = document.getElementById('tab-campaign');
+    const tabRts = document.getElementById('tab-rts');
 
     if (campHUD) campHUD.style.display = isCampaign ? 'flex' : 'none';
     if (rtsHUD) rtsHUD.style.display = isCampaign ? 'none' : 'flex';
+    if (theatersBar) theatersBar.style.display = isCampaign ? 'flex' : 'none';
+    if (provPanel) {
+      if (!isCampaign) provPanel.style.display = 'none';
+    }
+    if (unitPanel) unitPanel.style.display = isCampaign ? 'none' : 'block';
+    if (recruitBar) recruitBar.style.display = isCampaign ? 'none' : 'flex';
+    if (tabCamp) tabCamp.classList.toggle('active', isCampaign);
+    if (tabRts) tabRts.classList.toggle('active', !isCampaign);
     if (modeBadge) modeBadge.innerText = isCampaign ? '🌍 Gran Campaña 4X' : '⚔️ Combate Táctico RTS';
 
     // Manage 3D Globe visibility when switching modes
