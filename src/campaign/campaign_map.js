@@ -25,6 +25,14 @@ class Province {
     this.buildings = data.buildings || ['barracks', 'farm', 'market'];
     this.publicOrder = 85;
 
+    // Age of History 3 Administrative attributes
+    this.population = data.population || 60000;
+    this.developmentLevel = data.developmentLevel || Math.max(1, this.cityLevel * 2); // 1 to 10
+    this.economyValue = data.economyValue || (this.cityLevel * 25);
+    this.infrastructureLevel = data.infrastructureLevel || 1; // 1 to 5
+    this.defenseLevel = data.defenseLevel || (this.cityLevel >= 3 ? 3 : 1); // 0 to 4
+    this.isColonizable = data.isColonizable !== undefined ? data.isColonizable : (data.owner === 'neutral');
+
     // Local Garrison
     this.garrison = data.garrison || ['tercio', 'arquebusiers'];
   }
@@ -40,16 +48,20 @@ class Province {
   }
 
   calculateYield() {
-    let gold = 50 + this.cityLevel * 40;
-    let food = 60 + this.cityLevel * 30;
-    let iron = 20 + this.cityLevel * 20;
-    let science = 15;
+    // Age of History 3 Yield formula: scaled by development level and infrastructure
+    const devMult = 1.0 + (this.developmentLevel - 1) * 0.15;
+    const infraMult = 1.0 + (this.infrastructureLevel - 1) * 0.20;
 
-    if (this.hasBuilding('farm')) food += 90;
-    if (this.hasBuilding('mine')) iron += 70;
-    if (this.hasBuilding('market')) gold += 80;
+    let gold = Math.round((this.economyValue * 1.5 + this.cityLevel * 20) * devMult * infraMult);
+    let food = Math.round((50 + this.cityLevel * 25 + (this.population / 10000) * 6) * devMult);
+    let iron = Math.round((15 + this.cityLevel * 15 + this.infrastructureLevel * 12) * devMult);
+    let science = Math.round((10 + this.developmentLevel * 6) * infraMult);
+
+    if (this.hasBuilding('farm')) food += 80;
+    if (this.hasBuilding('mine')) iron += 65;
+    if (this.hasBuilding('market')) gold += 70;
     if (this.hasBuilding('university')) science += 45;
-    if (this.hasPort) gold += 60;
+    if (this.hasPort) gold += 55;
 
     return { gold, food, iron, science };
   }

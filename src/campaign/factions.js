@@ -242,6 +242,259 @@ const FACTIONS = {
     ],
     startingResources: { gold: 1300, food: 1000, iron: 350, science: 100 },
     epoch: 'medieval'
+  },
+
+  inca: {
+    id: 'inca',
+    name: 'Imperio Inca & Tawantinsuyu',
+    adjective: 'Inca',
+    banner: '☀️',
+    emblem: '🏔️',
+    leader: 'Huayna Cápac / Atahualpa',
+    colors: {
+      primary: '#ea580c',
+      secondary: '#9a3412',
+      accent: '#fdba74',
+      bg: 'rgba(234, 88, 12, 0.45)',
+      map: '#c2410c'
+    },
+    capitalProvince: 'cuzco',
+    traits: [
+      { name: 'Caminos del Inca', desc: '+35% velocidad de marcha en terrenos montañosos.' },
+      { name: 'Terrazas de Andenería', desc: '+40% de producción agrícola en los Andes.' },
+      { name: 'Guardia Imperial Huambracuna', desc: 'Guerreros con porras y boleadoras con gran armadura.' }
+    ],
+    startingResources: { gold: 1400, food: 1100, iron: 300, science: 105 },
+    epoch: 'medieval'
+  },
+
+  portugal: {
+    id: 'portugal',
+    name: 'Reino de Portugal & Ultramar',
+    adjective: 'Portugués',
+    banner: '🛡️',
+    emblem: '⚓',
+    leader: 'Manuel I / Vasco da Gama',
+    colors: {
+      primary: '#059669',
+      secondary: '#064e3b',
+      accent: '#34d399',
+      bg: 'rgba(5, 150, 105, 0.45)',
+      map: '#047857'
+    },
+    capitalProvince: 'lisbon',
+    traits: [
+      { name: 'Carabelas de Exploración', desc: 'Rutas marítimas generan +45% de Oro.' },
+      { name: 'Factorías de Especias', desc: '+30% de comercio en provincias costeras.' }
+    ],
+    startingResources: { gold: 1350, food: 800, iron: 420, science: 125 },
+    epoch: 'renaissance'
+  },
+
+  holland: {
+    id: 'holland',
+    name: 'Provincias Unidas de Holanda',
+    adjective: 'Holandés',
+    banner: '🦁',
+    emblem: '⛵',
+    leader: 'Mauricio de Nassau',
+    colors: {
+      primary: '#f97316',
+      secondary: '#9a3412',
+      accent: '#fdba74',
+      bg: 'rgba(249, 115, 22, 0.45)',
+      map: '#ea580c'
+    },
+    capitalProvince: 'holland',
+    traits: [
+      { name: 'Compañía de las Indias', desc: '+50% ingresos por rutas comerciales ultramarinas.' },
+      { name: 'Tácticas de Mauricio', desc: 'Fuego en contramarcha para arcabuceros y mosqueteros.' }
+    ],
+    startingResources: { gold: 1500, food: 750, iron: 450, science: 135 },
+    epoch: 'renaissance'
+  },
+
+  hre: {
+    id: 'hre',
+    name: 'Sacro Imperio Romano Germánico',
+    adjective: 'Imperial',
+    banner: '🦅',
+    emblem: '⚔️',
+    leader: 'Maximiliano I / Casa de Austria',
+    colors: {
+      primary: '#eab308',
+      secondary: '#713f12',
+      accent: '#fef08a',
+      bg: 'rgba(234, 179, 8, 0.45)',
+      map: '#ca8a04'
+    },
+    capitalProvince: 'austria',
+    traits: [
+      { name: 'Regimientos Lansquenetes', desc: 'Infantería de picas y mandobles con gran pegada.' },
+      { name: 'Metalurgia Germánica', desc: '+35% producción de Hierro.' }
+    ],
+    startingResources: { gold: 1100, food: 850, iron: 650, science: 120 },
+    epoch: 'renaissance'
+  },
+
+  russia: {
+    id: 'russia',
+    name: 'Zarato de Rusia & Moscovia',
+    adjective: 'Ruso',
+    banner: '🦅',
+    emblem: '🐻',
+    leader: 'Iván IV / Pedro el Grande',
+    colors: {
+      primary: '#0284c7',
+      secondary: '#082f49',
+      accent: '#38bdf8',
+      bg: 'rgba(2, 132, 199, 0.45)',
+      map: '#0369a1'
+    },
+    capitalProvince: 'moscow',
+    traits: [
+      { name: 'Streltsí de la Guardia', desc: 'Mosqueteros con hachas de combate y alta resistencia invernal.' },
+      { name: 'Inmensidad Esteparia', desc: 'Resistencia contra desgaste y bajo coste de reclutamiento.' }
+    ],
+    startingResources: { gold: 1050, food: 1150, iron: 600, science: 100 },
+    epoch: 'renaissance'
+  },
+
+  poland: {
+    id: 'poland',
+    name: 'Mancomunidad Polaco-Lituana',
+    adjective: 'Polaco',
+    banner: '🦅',
+    emblem: '🪶',
+    leader: 'Segismundo II / Jan III Sobieski',
+    colors: {
+      primary: '#e11d48',
+      secondary: '#4c0519',
+      accent: '#fb7185',
+      bg: 'rgba(225, 29, 72, 0.45)',
+      map: '#be123c'
+    },
+    capitalProvince: 'poland',
+    traits: [
+      { name: 'Húsares Alados', desc: 'Caballería pesada de élite con la carga de choque más devastadora.' },
+      { name: 'Libertad Dorada', desc: '+25% de moral para tropas montadas.' }
+    ],
+    startingResources: { gold: 1100, food: 950, iron: 550, science: 110 },
+    epoch: 'renaissance'
+  },
+
+  sweden: {
+    id: 'sweden',
+    name: 'Imperio Sueco & Báltico',
+    adjective: 'Sueco',
+    banner: '🦁',
+    emblem: '⚔️',
+    leader: 'Gustavo Adolfo',
+    colors: {
+      primary: '#0284c7',
+      secondary: '#1e3a8a',
+      accent: '#facc15',
+      bg: 'rgba(2, 132, 199, 0.45)',
+      map: '#0369a1'
+    },
+    capitalProvince: 'sweden',
+    traits: [
+      { name: 'Doctrina de Fuego Rápido', desc: 'Salvas combinadas de mosquetería y artillería ligera de cuero.' },
+      { name: 'Disciplina Severa', desc: '+25% resistencia a la fatiga en combate.' }
+    ],
+    startingResources: { gold: 1000, food: 800, iron: 700, science: 125 },
+    epoch: 'renaissance'
+  },
+
+  mughal: {
+    id: 'mughal',
+    name: 'Imperio Mogol de la India',
+    adjective: 'Mogol',
+    banner: '🕌',
+    emblem: '🐘',
+    leader: 'Akbar el Grande',
+    colors: {
+      primary: '#15803d',
+      secondary: '#14532d',
+      accent: '#86efac',
+      bg: 'rgba(21, 128, 61, 0.45)',
+      map: '#166534'
+    },
+    capitalProvince: 'delhi',
+    traits: [
+      { name: 'Elefantes de Guerra', desc: 'Unidades gigantes que pulverizan líneas de infantería enemigas.' },
+      { name: 'Riqueza del Indostán', desc: '+40% de ingresos de Oro por tributos y sedas.' }
+    ],
+    startingResources: { gold: 1500, food: 1200, iron: 500, science: 120 },
+    epoch: 'renaissance'
+  },
+
+  safavid: {
+    id: 'safavid',
+    name: 'Imperio Safávida de Persia',
+    adjective: 'Safávida',
+    banner: '🦁',
+    emblem: '☀️',
+    leader: 'Shah Ismail / Shah Abbas I',
+    colors: {
+      primary: '#0891b2',
+      secondary: '#164e63',
+      accent: '#67e8f9',
+      bg: 'rgba(8, 145, 178, 0.45)',
+      map: '#0e7490'
+    },
+    capitalProvince: 'isfahan',
+    traits: [
+      { name: 'Caballería Qizilbash', desc: 'Jinetes devotos de choque con bonificación de moral.' },
+      { name: 'Artesanía de Isfahán', desc: '+30% de producción científica y cultural.' }
+    ],
+    startingResources: { gold: 1200, food: 850, iron: 450, science: 125 },
+    epoch: 'renaissance'
+  },
+
+  morocco: {
+    id: 'morocco',
+    name: 'Sultanato Saadí de Marruecos',
+    adjective: 'Marroquí',
+    banner: '🌙',
+    emblem: '🕌',
+    leader: 'Ahmad al-Mansur',
+    colors: {
+      primary: '#b45309',
+      secondary: '#78350f',
+      accent: '#fde68a',
+      bg: 'rgba(180, 83, 9, 0.45)',
+      map: '#92400e'
+    },
+    capitalProvince: 'fes',
+    traits: [
+      { name: 'Mosqueteros del Desierto', desc: 'Infantería ligera con arcabuces adaptados a la guerra en arenas.' },
+      { name: 'Ruta del Oro Transahariana', desc: '+35% ingresos de Oro.' }
+    ],
+    startingResources: { gold: 1150, food: 800, iron: 380, science: 105 },
+    epoch: 'renaissance'
+  },
+
+  neutral: {
+    id: 'neutral',
+    name: 'Tierras Neutrales & Fronteras Colonizables',
+    adjective: 'Neutral',
+    banner: '🏕️',
+    emblem: '🌲',
+    leader: 'Poblaciones Locales & Frontera Salvaje',
+    colors: {
+      primary: '#64748b',
+      secondary: '#334155',
+      accent: '#94a3b8',
+      bg: 'rgba(100, 116, 139, 0.35)',
+      map: '#475569'
+    },
+    capitalProvince: 'great_plains',
+    traits: [
+      { name: 'Tierra Virgen', desc: 'Territorio no reclamado que puede ser colonizado pacíficamente o anexionado mediante inversión de desarrollo.' }
+    ],
+    startingResources: { gold: 300, food: 300, iron: 100, science: 20 },
+    epoch: 'medieval'
   }
 };
 
