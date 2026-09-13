@@ -197,8 +197,10 @@ class BattleBridge {
     enc.attacker.regiments.forEach((reg, idx) => {
       const uDef = window.game.campaign.armyManager._findUnitDef(reg.unitKey);
       if (uDef) {
-        const startX = isPlayerAttacker ? 500 : 1100;
-        const startY = 360 + idx * 75;
+        const col = Math.floor(idx / 8);
+        const row = idx % 8;
+        const startX = isPlayerAttacker ? (750 - col * 130) : (4050 + col * 130);
+        const startY = 1100 + row * 130 + (col % 2) * 35;
         const angle = isPlayerAttacker ? 0 : Math.PI;
         const u = new Unit(window.game.nextUnitId++, uDef, attTeam, startX, startY, angle);
         u.health = (reg.soldiers / reg.maxSoldiers) * u.maxHealth;
@@ -211,8 +213,10 @@ class BattleBridge {
     enc.defender.regiments.forEach((reg, idx) => {
       const uDef = window.game.campaign.armyManager._findUnitDef(reg.unitKey);
       if (uDef) {
-        const startX = isPlayerAttacker ? 1100 : 500;
-        const startY = 360 + idx * 75;
+        const col = Math.floor(idx / 8);
+        const row = idx % 8;
+        const startX = isPlayerAttacker ? (4050 + col * 130) : (750 - col * 130);
+        const startY = 1100 + row * 130 + (col % 2) * 35;
         const angle = isPlayerAttacker ? Math.PI : 0;
         const u = new Unit(window.game.nextUnitId++, uDef, defTeam, startX, startY, angle);
         u.health = (reg.soldiers / reg.maxSoldiers) * u.maxHealth;
@@ -220,6 +224,15 @@ class BattleBridge {
         window.game.units.push(u);
       }
     });
+
+    // Center camera on player's army deployment
+    if (window.game.camera && window.game.canvas) {
+      const playerSpawnX = isPlayerAttacker ? 750 : 4050;
+      const playerSpawnY = 1500;
+      window.game.camera.zoom = 0.75;
+      window.game.camera.x = (window.game.canvas.width * 0.5) - playerSpawnX * window.game.camera.zoom;
+      window.game.camera.y = (window.game.canvas.height * 0.5) - playerSpawnY * window.game.camera.zoom;
+    }
 
     // Switch view to RTS Tactical Canvas
     window.game.campaign.switchMode('rts');

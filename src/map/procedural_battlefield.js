@@ -2,13 +2,13 @@
  * Chronicles of War - Empire Earth Procedural Battlefield Generator
  * Implements the architecture of Empire Earth RMV (Random Map Scripts)
  * Supports multiple map types: Continental, Highlands, Mediterranean, Plains, and Siege Breach.
- * Features multi-tier elevation, biomes, meandering rivers, bridges, fords, and resource nodes.
+ * Features grand operational scale (4800 x 3200 px), multi-tier elevation, biomes, meandering rivers, bridges, fords, and forward capture points.
  */
 
 class ProceduralBattlefieldGenerator {
   constructor() {
-    this.width = 1600;
-    this.height = 1100;
+    this.width = 4800;
+    this.height = 3200;
   }
 
   _createPRNG(seed) {
@@ -51,6 +51,8 @@ class ProceduralBattlefieldGenerator {
     const mapData = {
       mapType,
       climate,
+      width: this.width,
+      height: this.height,
       hills: [],
       forests: [],
       roads: [],
@@ -60,15 +62,21 @@ class ProceduralBattlefieldGenerator {
       resources: []
     };
 
-    // 1. Camps & Bases (Symmetrical deployment zones for Team 0 & Team 1)
-    const campY0 = 550 + (prng() - 0.5) * 80;
-    const campY1 = 550 + (prng() - 0.5) * 80;
+    // 1. Camps & Bases (Grand Operational Scale: 4800 x 3200 px)
+    const campY0 = 1600 + (prng() - 0.5) * 250;
+    const campY1 = 1600 + (prng() - 0.5) * 250;
     mapData.camps = [
-      { x: 220, y: campY0, team: 0, name: 'Línea y Cuartel Aliado' },
-      { x: 1380, y: campY1, team: 1, name: `Campamento de ${province.capitalName || 'Fuerza Hostil'}` }
+      // Base Camps
+      { x: 550, y: campY0, team: 0, name: 'Cuartel General & Tren de Bagajes Aliado' },
+      { x: 4250, y: campY1, team: 1, name: `Campamento y Estado Mayor de ${province.capitalName || 'Fuerza Hostil'}` },
+
+      // Forward Tactical Capture Points (Total War & Wargame Command Objectives)
+      { x: 2400, y: 750, team: -1, name: 'Molino Fortificado & Reducto Norte' },
+      { x: 2400, y: 1600, team: -1, name: 'Cruce Central & Puente de Piedra' },
+      { x: 2400, y: 2450, team: -1, name: 'Baluarte & Batería de Artillería Sur' }
     ];
 
-    // 2. Map-Specific Topology Generation
+    // 2. Map-Specific Topology Generation (Scaled to 4800 x 3200 px)
     switch (mapType) {
       case 'siege_breach':
         this._buildSiegeBreachMap(mapData, prng, province);
@@ -98,235 +106,263 @@ class ProceduralBattlefieldGenerator {
 
   _buildContinentalMap(mapData, prng) {
     // A. Central Meandering River
-    const riverMidX = 800 + (prng() - 0.5) * 80;
-    const bridgeY = 550 + (prng() - 0.5) * 60;
+    const riverMidX = 2400 + (prng() - 0.5) * 240;
+    const bridgeY = 1600 + (prng() - 0.5) * 180;
 
     mapData.rivers.push({
-      width: 34,
+      width: 55,
       points: [
-        { x: riverMidX + 40, y: 30 },
-        { x: riverMidX - 60, y: 320 },
-        { x: riverMidX + 20, y: bridgeY },
-        { x: riverMidX - 40, y: 780 },
-        { x: riverMidX + 50, y: 1070 }
+        { x: riverMidX + 120, y: 60 },
+        { x: riverMidX - 180, y: 920 },
+        { x: riverMidX + 60, y: bridgeY },
+        { x: riverMidX - 120, y: 2280 },
+        { x: riverMidX + 150, y: 3140 }
       ],
       bridges: [
-        { x: riverMidX + 20, y: bridgeY, angle: 0 },
-        { x: riverMidX - 50, y: 250, angle: 0.15 } // Secondary crossing
+        { x: riverMidX + 60, y: bridgeY, angle: 0 },         // Main Stone Bridge (Center)
+        { x: riverMidX - 160, y: 750, angle: 0.15 },        // Northern Wooden Bridge
+        { x: riverMidX - 100, y: 2450, angle: -0.15 }       // Southern Ford & Causeway
       ]
     });
 
-    // B. Strategic Paved Road connecting Camps via Main Bridge
+    // B. Strategic Paved Roads connecting Camps via Bridges & Forward Outposts
+    // Main Central Highway
     mapData.roads.push({
-      width: 22,
+      width: 26,
       points: [
-        { x: 150, y: mapData.camps[0].y },
-        { x: 450, y: 550 },
-        { x: riverMidX + 20, y: bridgeY },
-        { x: 1150, y: 550 },
-        { x: 1450, y: mapData.camps[1].y }
+        { x: 450, y: mapData.camps[0].y },
+        { x: 1350, y: 1600 },
+        { x: riverMidX + 60, y: bridgeY },
+        { x: 3450, y: 1600 },
+        { x: 4350, y: mapData.camps[1].y }
       ]
     });
 
-    // C. Flanking Elevation Hills (Artillery vantage points)
+    // Northern Flanking Bypass Road
+    mapData.roads.push({
+      width: 20,
+      points: [
+        { x: 750, y: 1100 },
+        { x: 1500, y: 750 },
+        { x: riverMidX - 160, y: 750 },
+        { x: 3300, y: 750 },
+        { x: 4050, y: 1100 }
+      ]
+    });
+
+    // Southern Ridge Road
+    mapData.roads.push({
+      width: 20,
+      points: [
+        { x: 750, y: 2100 },
+        { x: 1500, y: 2450 },
+        { x: riverMidX - 100, y: 2450 },
+        { x: 3300, y: 2450 },
+        { x: 4050, y: 2100 }
+      ]
+    });
+
+    // C. Flanking Elevation Hills (High vantage points for batteries & defense)
     mapData.hills.push(
-      { x: 480, y: 220, rx: 140, ry: 80, angle: 0.2 },
-      { x: 480, y: 880, rx: 130, ry: 75, angle: -0.15 },
-      { x: 1120, y: 220, rx: 140, ry: 80, angle: -0.2 },
-      { x: 1120, y: 880, rx: 130, ry: 75, angle: 0.15 }
+      { x: 1400, y: 650, rx: 420, ry: 240, angle: 0.2 },
+      { x: 1400, y: 2550, rx: 390, ry: 220, angle: -0.15 },
+      { x: 3400, y: 650, rx: 420, ry: 240, angle: -0.2 },
+      { x: 3400, y: 2550, rx: 390, ry: 220, angle: 0.15 },
+      { x: 2400, y: 320, rx: 360, ry: 180, angle: 0 },
+      { x: 2400, y: 2880, rx: 360, ry: 180, angle: 0 }
     );
 
-    // D. Deciduous Forests
+    // D. Deciduous Forests & Ambush Woodlots
     mapData.forests.push(
-      { x: 320, y: 180, rx: 110, ry: 70 },
-      { x: 320, y: 920, rx: 100, ry: 65 },
-      { x: 1280, y: 180, rx: 110, ry: 70 },
-      { x: 1280, y: 920, rx: 100, ry: 65 },
-      { x: 800, y: 140, rx: 90, ry: 50 },
-      { x: 800, y: 960, rx: 90, ry: 50 }
+      { x: 950, y: 540, rx: 330, ry: 210 },
+      { x: 950, y: 2660, rx: 300, ry: 195 },
+      { x: 3850, y: 540, rx: 330, ry: 210 },
+      { x: 3850, y: 2660, rx: 300, ry: 195 },
+      { x: 2100, y: 1100, rx: 270, ry: 160 }, // Forest hideout near north bridge
+      { x: 2700, y: 2100, rx: 270, ry: 160 }, // Forest hideout near south ford
+      { x: 2400, y: 420, rx: 250, ry: 140 }
     );
   }
 
   _buildHighlandsMap(mapData, prng) {
     // Rocky plateaus and mountain pass
-    // Narrow canyon with mountain cliffs
     mapData.hills.push(
-      { x: 800, y: 160, rx: 320, ry: 130, angle: 0 },  // Northern mountain wall
-      { x: 800, y: 940, rx: 320, ry: 130, angle: 0 },  // Southern mountain wall
-      { x: 420, y: 550, rx: 120, ry: 90, angle: 0.3 },  // West plateau
-      { x: 1180, y: 550, rx: 120, ry: 90, angle: -0.3 } // East plateau
+      { x: 2400, y: 450, rx: 950, ry: 380, angle: 0 },    // Massive Northern Mountain Ridge
+      { x: 2400, y: 2750, rx: 950, ry: 380, angle: 0 },   // Massive Southern Mountain Ridge
+      { x: 1250, y: 1600, rx: 360, ry: 270, angle: 0.3 },  // West defensive plateau
+      { x: 3550, y: 1600, rx: 360, ry: 270, angle: -0.3 }  // East defensive plateau
     );
 
     // Fast Alpine Mountain Stream
     mapData.rivers.push({
-      width: 24,
+      width: 38,
       points: [
-        { x: 860, y: 290 },
-        { x: 810, y: 440 },
-        { x: 790, y: 550 },
-        { x: 830, y: 700 },
-        { x: 870, y: 810 }
+        { x: 2580, y: 850 },
+        { x: 2430, y: 1300 },
+        { x: 2370, y: 1600 },
+        { x: 2490, y: 2100 },
+        { x: 2610, y: 2430 }
       ],
       bridges: [
-        { x: 790, y: 550, angle: 0 } // Narrow timber bridge in gorge
+        { x: 2370, y: 1600, angle: 0 } // Narrow timber bridge in rocky gorge
       ]
     });
 
-    // Highway through pass
+    // Highway through mountain pass
     mapData.roads.push({
-      width: 20,
+      width: 24,
       points: [
-        { x: 180, y: mapData.camps[0].y },
-        { x: 600, y: 550 },
-        { x: 790, y: 550 },
-        { x: 1000, y: 550 },
-        { x: 1420, y: mapData.camps[1].y }
+        { x: 500, y: mapData.camps[0].y },
+        { x: 1800, y: 1600 },
+        { x: 2370, y: 1600 },
+        { x: 3000, y: 1600 },
+        { x: 4300, y: mapData.camps[1].y }
       ]
     });
 
-    // Conifer pine clusters
+    // Conifer pine clusters for ambushes
     mapData.forests.push(
-      { x: 620, y: 340, rx: 80, ry: 60 },
-      { x: 620, y: 760, rx: 80, ry: 60 },
-      { x: 980, y: 340, rx: 80, ry: 60 },
-      { x: 980, y: 760, rx: 80, ry: 60 }
+      { x: 1850, y: 1000, rx: 240, ry: 180 },
+      { x: 1850, y: 2200, rx: 240, ry: 180 },
+      { x: 2950, y: 1000, rx: 240, ry: 180 },
+      { x: 2950, y: 2200, rx: 240, ry: 180 }
     );
   }
 
   _buildMediterraneanMap(mapData, prng) {
-    // Coastal bay on the south edge
+    // Coastal bay on the southern flank
     mapData.rivers.push({
-      width: 140, // Wide coastal sea / bay
+      width: 280, // Wide coastal sea edge
       points: [
-        { x: 50, y: 1020 },
-        { x: 500, y: 960 },
-        { x: 1000, y: 940 },
-        { x: 1550, y: 980 }
+        { x: 150, y: 3050 },
+        { x: 1500, y: 2880 },
+        { x: 3000, y: 2820 },
+        { x: 4650, y: 2940 }
       ],
-      bridges: [] // Ocean edge, no bridges
+      bridges: []
     });
 
-    // Terraced hills overlooking the coast
+    // Terraced hills overlooking coastal plain
     mapData.hills.push(
-      { x: 500, y: 350, rx: 180, ry: 100, angle: 0.1 },
-      { x: 1100, y: 350, rx: 180, ry: 100, angle: -0.1 },
-      { x: 800, y: 650, rx: 140, ry: 75, angle: 0 }
+      { x: 1500, y: 1050, rx: 540, ry: 300, angle: 0.1 },
+      { x: 3300, y: 1050, rx: 540, ry: 300, angle: -0.1 },
+      { x: 2400, y: 1950, rx: 420, ry: 220, angle: 0 }
     );
 
-    // Coastal road
+    // Coastal military highway
     mapData.roads.push({
-      width: 22,
+      width: 26,
       points: [
-        { x: 150, y: 700 },
-        { x: 550, y: 720 },
-        { x: 1050, y: 720 },
-        { x: 1450, y: 700 }
+        { x: 450, y: 2100 },
+        { x: 1650, y: 2160 },
+        { x: 3150, y: 2160 },
+        { x: 4350, y: 2100 }
       ]
     });
 
     // Olive and cypress groves
     mapData.forests.push(
-      { x: 380, y: 220, rx: 90, ry: 60 },
-      { x: 1220, y: 220, rx: 90, ry: 60 },
-      { x: 800, y: 260, rx: 100, ry: 50 }
+      { x: 1140, y: 660, rx: 270, ry: 180 },
+      { x: 3660, y: 660, rx: 270, ry: 180 },
+      { x: 2400, y: 780, rx: 300, ry: 150 }
     );
   }
 
   _buildPlainsMap(mapData, prng) {
-    // Open maneuvers, few obstacles
+    // Grand open maneuvers
     mapData.hills.push(
-      { x: 800, y: 320, rx: 110, ry: 65, angle: 0.2 },
-      { x: 800, y: 780, rx: 110, ry: 65, angle: -0.2 }
+      { x: 2400, y: 960, rx: 330, ry: 195, angle: 0.2 },
+      { x: 2400, y: 2340, rx: 330, ry: 195, angle: -0.2 }
     );
 
-    // Direct military road
+    // Direct grand paved road
     mapData.roads.push({
-      width: 24,
+      width: 28,
       points: [
-        { x: 150, y: mapData.camps[0].y },
-        { x: 550, y: 550 },
-        { x: 1050, y: 550 },
-        { x: 1450, y: mapData.camps[1].y }
+        { x: 450, y: mapData.camps[0].y },
+        { x: 1650, y: 1600 },
+        { x: 3150, y: 1600 },
+        { x: 4350, y: mapData.camps[1].y }
       ]
     });
 
-    // Light copses of trees
+    // Light woods on wings
     mapData.forests.push(
-      { x: 520, y: 180, rx: 75, ry: 50 },
-      { x: 520, y: 920, rx: 75, ry: 50 },
-      { x: 1080, y: 180, rx: 75, ry: 50 },
-      { x: 1080, y: 920, rx: 75, ry: 50 }
+      { x: 1560, y: 540, rx: 225, ry: 150 },
+      { x: 1560, y: 2660, rx: 225, ry: 150 },
+      { x: 3240, y: 540, rx: 225, ry: 150 },
+      { x: 3240, y: 2660, rx: 225, ry: 150 }
     );
   }
 
   _buildSiegeBreachMap(mapData, prng, province) {
-    const wallX = 820;
-    const breachY = 550;
-    const breachRadius = 42;
+    const wallX = 2460;
+    const breachY = 1600;
+    const breachRadius = 125;
 
     mapData.fortifications = [
       // North Wall Segment
       {
         type: 'wall',
-        width: 24,
+        width: 32,
         x1: wallX,
-        y1: 60,
+        y1: 180,
         x2: wallX,
         y2: breachY - breachRadius
       },
-      // North Star Bastion (Trace Italienne point)
+      // North Star Bastion
       {
         type: 'bastion',
         points: [
-          { x: wallX, y: breachY - breachRadius - 200 },
-          { x: wallX + 90, y: breachY - breachRadius - 120 },
-          { x: wallX, y: breachY - breachRadius - 40 }
+          { x: wallX, y: breachY - breachRadius - 600 },
+          { x: wallX + 270, y: breachY - breachRadius - 360 },
+          { x: wallX, y: breachY - breachRadius - 120 }
         ]
       },
       // South Wall Segment
       {
         type: 'wall',
-        width: 24,
+        width: 32,
         x1: wallX,
         y1: breachY + breachRadius,
         x2: wallX,
-        y2: 1040,
+        y2: 3120,
         breaches: [
           { x: wallX, y: breachY, radius: breachRadius }
         ]
       },
-      // South Star Bastion (Trace Italienne point)
+      // South Star Bastion
       {
         type: 'bastion',
         points: [
-          { x: wallX, y: breachY + breachRadius + 40 },
-          { x: wallX + 90, y: breachY + breachRadius + 120 },
-          { x: wallX, y: breachY + breachRadius + 200 }
+          { x: wallX, y: breachY + breachRadius + 120 },
+          { x: wallX + 270, y: breachY + breachRadius + 360 },
+          { x: wallX, y: breachY + breachRadius + 600 }
         ]
       }
     ];
 
     // Assault Road through the rubble breach
     mapData.roads.push({
-      width: 22,
+      width: 28,
       points: [
-        { x: 100, y: breachY },
-        { x: wallX - 80, y: breachY },
-        { x: wallX + 80, y: breachY },
-        { x: 1500, y: breachY }
+        { x: 450, y: breachY },
+        { x: wallX - 240, y: breachY },
+        { x: wallX + 240, y: breachY },
+        { x: 4350, y: breachY }
       ]
     });
 
-    // Siege trenches / Redoubts for attackers
+    // Siege battery redoubts for attackers
     mapData.hills.push(
-      { x: 450, y: 350, rx: 90, ry: 50, angle: 0.3 }, // Attacker artillery redoubt
-      { x: 450, y: 750, rx: 90, ry: 50, angle: -0.3 } // Attacker artillery redoubt
+      { x: 1350, y: 1050, rx: 270, ry: 150, angle: 0.3 },
+      { x: 1350, y: 2250, rx: 270, ry: 150, angle: -0.3 }
     );
 
     // Fortress interior citadel grounds
     mapData.forests.push(
-      { x: 1150, y: 250, rx: 90, ry: 60 },
-      { x: 1150, y: 850, rx: 90, ry: 60 }
+      { x: 3450, y: 750, rx: 270, ry: 180 },
+      { x: 3450, y: 2550, rx: 270, ry: 180 }
     );
   }
 
@@ -334,19 +370,24 @@ class ProceduralBattlefieldGenerator {
   _distributeResourceNodes(mapData, prng) {
     mapData.resources = [
       // Player Sector Resources
-      { type: 'gold', x: 380, y: 320, name: 'Mina de Oro Imperial', amount: 2000 },
-      { type: 'iron', x: 380, y: 780, name: 'Veta de Hierro Forjado', amount: 1500 },
-      { type: 'food', x: 260, y: 500, name: 'Granero y Harinera', amount: 1800 },
+      { type: 'gold', x: 1140, y: 960, name: 'Mina de Oro Imperial', amount: 2000 },
+      { type: 'iron', x: 1140, y: 2340, name: 'Veta de Hierro Forjado', amount: 1500 },
+      { type: 'food', x: 780, y: 1500, name: 'Granero y Harinera', amount: 1800 },
 
       // Enemy Sector Resources
-      { type: 'gold', x: 1220, y: 320, name: 'Mina de Oro', amount: 2000 },
-      { type: 'iron', x: 1220, y: 780, name: 'Veta de Hierro', amount: 1500 },
-      { type: 'food', x: 1340, y: 500, name: 'Silos de Cosecha', amount: 1800 },
+      { type: 'gold', x: 3660, y: 960, name: 'Mina de Oro', amount: 2000 },
+      { type: 'iron', x: 3660, y: 2340, name: 'Veta de Hierro', amount: 1500 },
+      { type: 'food', x: 4020, y: 1500, name: 'Silos de Cosecha', amount: 1800 },
 
       // Neutral Contested Center Resource
-      { type: 'gold', x: 800, y: 180, name: 'Tesoro Central Disputado', amount: 3000 }
+      { type: 'gold', x: 2400, y: 540, name: 'Tesoro Central Disputado', amount: 3000 }
     ];
   }
 }
 
-window.ProceduralBattlefieldGenerator = ProceduralBattlefieldGenerator;
+if (typeof window !== 'undefined') {
+  window.ProceduralBattlefieldGenerator = ProceduralBattlefieldGenerator;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.ProceduralBattlefieldGenerator = ProceduralBattlefieldGenerator;
+}

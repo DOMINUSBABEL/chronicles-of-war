@@ -4,7 +4,7 @@
  */
 
 class TacticalMap {
-  constructor(width = 3200, height = 2400) {
+  constructor(width = 4800, height = 3200) {
     this.width = width;
     this.height = height;
     this.terrainCanvas = null;
@@ -56,10 +56,10 @@ class TacticalMap {
     ctx.fillStyle = '#f4efe4';
     ctx.fillRect(0, 0, this.width, this.height);
 
-    // Subtle paper grain & grid lines
-    ctx.strokeStyle = 'rgba(180, 160, 140, 0.15)';
+    // Subtle paper grain & grid lines (Engraved military survey grid)
+    ctx.strokeStyle = 'rgba(180, 160, 140, 0.14)';
     ctx.lineWidth = 1;
-    const gridSize = 60;
+    const gridSize = 80;
     for (let x = 0; x < this.width; x += gridSize) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -73,7 +73,7 @@ class TacticalMap {
       ctx.stroke();
     }
 
-    // 2. Elevation Hills with Contour Lines
+    // 2. Elevation Hills with Contour Lines & Topographic Slope Hachures
     this.hills.forEach(hill => {
       ctx.save();
       ctx.fillStyle = '#e8dfcb';
@@ -83,12 +83,38 @@ class TacticalMap {
 
       // Contour rings
       ctx.strokeStyle = '#cfbf9f';
-      ctx.lineWidth = 1.2;
-      for (let s = 0.8; s >= 0.3; s -= 0.25) {
+      ctx.lineWidth = 1.4;
+      for (let s = 0.82; s >= 0.3; s -= 0.26) {
         ctx.beginPath();
         ctx.ellipse(hill.x, hill.y, hill.rx * s, hill.ry * s, hill.angle || 0, 0, Math.PI * 2);
         ctx.stroke();
       }
+
+      // Topographic slope hachures (Antique military relief engraving)
+      ctx.save();
+      ctx.translate(hill.x, hill.y);
+      ctx.rotate(hill.angle || 0);
+      ctx.strokeStyle = 'rgba(160, 130, 95, 0.42)';
+      ctx.lineWidth = 0.9;
+      const hachureSteps = 42;
+      for (let i = 0; i < hachureSteps; i++) {
+        const th = (i / hachureSteps) * Math.PI * 2;
+        const cos = Math.cos(th);
+        const sin = Math.sin(th);
+        ctx.beginPath();
+        ctx.moveTo(cos * hill.rx * 0.96, sin * hill.ry * 0.96);
+        ctx.lineTo(cos * hill.rx * 0.74, sin * hill.ry * 0.74);
+        ctx.stroke();
+
+        if (i % 2 === 0) {
+          ctx.beginPath();
+          ctx.moveTo(cos * hill.rx * 0.70, sin * hill.ry * 0.70);
+          ctx.lineTo(cos * hill.rx * 0.48, sin * hill.ry * 0.48);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+
       ctx.restore();
     });
 
@@ -96,7 +122,7 @@ class TacticalMap {
     ctx.save();
     this.roads.forEach(road => {
       ctx.strokeStyle = '#e2d5be';
-      ctx.lineWidth = road.width || 18;
+      ctx.lineWidth = road.width || 22;
       ctx.lineCap = 'round';
       ctx.beginPath();
       road.points.forEach((pt, idx) => {
@@ -107,16 +133,16 @@ class TacticalMap {
 
       // Road edge borders
       ctx.strokeStyle = '#baa686';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.2;
       ctx.stroke();
     });
     ctx.restore();
 
-    // 4. Rivers & Bridges
+    // 4. Rivers & Bridges with Shoreline Stippling
     this.rivers.forEach(river => {
       ctx.save();
       ctx.strokeStyle = '#7ca6b8';
-      ctx.lineWidth = river.width || 28;
+      ctx.lineWidth = river.width || 32;
       ctx.lineCap = 'round';
       ctx.beginPath();
       river.points.forEach((pt, idx) => {
@@ -127,27 +153,41 @@ class TacticalMap {
 
       // River bank lines
       ctx.strokeStyle = '#5a8497';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.6;
       ctx.stroke();
+
+      // Shoreline stippling dots
+      ctx.fillStyle = 'rgba(90, 132, 151, 0.4)';
+      river.points.forEach((pt, idx) => {
+        if (idx % 2 === 0) {
+          for (let s = 0; s < 5; s++) {
+            const sx = pt.x + (Math.random() - 0.5) * (river.width * 1.4);
+            const sy = pt.y + (Math.random() - 0.5) * (river.width * 1.4);
+            ctx.beginPath();
+            ctx.arc(sx, sy, 0.8 + Math.random() * 0.9, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      });
 
       // Bridges
       if (river.bridges) {
         river.bridges.forEach(br => {
           ctx.fillStyle = '#baa686';
           ctx.strokeStyle = '#5c4933';
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 2.2;
           ctx.save();
           ctx.translate(br.x, br.y);
           ctx.rotate(br.angle || 0);
-          ctx.fillRect(-16, -river.width * 0.65, 32, river.width * 1.3);
-          ctx.strokeRect(-16, -river.width * 0.65, 32, river.width * 1.3);
+          ctx.fillRect(-18, -river.width * 0.65, 36, river.width * 1.3);
+          ctx.strokeRect(-18, -river.width * 0.65, 36, river.width * 1.3);
           ctx.restore();
         });
       }
       ctx.restore();
     });
 
-    // 5. Forests & Groves
+    // 5. Forests & Groves (Antique Woodcut Styling with Trunks & Canopies)
     this.forests.forEach(forest => {
       ctx.save();
       ctx.fillStyle = '#8ea375';
@@ -155,11 +195,13 @@ class TacticalMap {
       ctx.ellipse(forest.x, forest.y, forest.rx, forest.ry, forest.angle || 0, 0, Math.PI * 2);
       ctx.fill();
 
+      // Outer boundary engraving
+      ctx.strokeStyle = '#637e4c';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
       // Tree clusters inside grove
-      ctx.fillStyle = '#657e4e';
-      ctx.strokeStyle = '#4c6139';
-      ctx.lineWidth = 1.0;
-      const treeCount = Math.floor((forest.rx * forest.ry) / 250);
+      const treeCount = Math.floor((forest.rx * forest.ry) / 280);
       for (let t = 0; t < treeCount; t++) {
         const u = Math.random();
         const v = Math.random();
@@ -167,8 +209,17 @@ class TacticalMap {
         const theta = v * 2 * Math.PI;
         const tx = forest.x + r * forest.rx * 0.85 * Math.cos(theta);
         const ty = forest.y + r * forest.ry * 0.85 * Math.sin(theta);
+
+        // Tiny woodcut tree trunk
+        ctx.fillStyle = '#5c4033';
+        ctx.fillRect(tx - 0.7, ty, 1.4, 3.5);
+
+        // Canopy crown
+        ctx.fillStyle = '#5a7543';
+        ctx.strokeStyle = '#3e522d';
+        ctx.lineWidth = 0.8;
         ctx.beginPath();
-        ctx.arc(tx, ty, 5 + Math.random() * 4, 0, Math.PI * 2);
+        ctx.arc(tx, ty - 2, 4 + Math.random() * 3.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }
@@ -311,6 +362,97 @@ class TacticalMap {
         ctx.restore();
       });
     }
+
+    // 9. Antique Renaissance Compass Rose & Military Scale Bar Cartouche
+    ctx.save();
+    const crX = 220;
+    const crY = 200;
+    ctx.translate(crX, crY);
+
+    // Ornate outer circle
+    ctx.strokeStyle = '#8c7853';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, 52, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#cfbf9f';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, 47, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 8-Pointed Compass Star
+    for (let p = 0; p < 8; p++) {
+      const ang = (p * Math.PI) / 4;
+      const rOuter = (p % 2 === 0) ? 46 : 28;
+      const rInner = 9;
+
+      // Dark half
+      ctx.fillStyle = (p % 2 === 0) ? '#4a3b2c' : '#78644e';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(ang) * rOuter, Math.sin(ang) * rOuter);
+      ctx.lineTo(Math.cos(ang + Math.PI / 8) * rInner, Math.sin(ang + Math.PI / 8) * rInner);
+      ctx.closePath();
+      ctx.fill();
+
+      // Light half
+      ctx.fillStyle = (p % 2 === 0) ? '#f4efe4' : '#e2d5be';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(ang) * rOuter, Math.sin(ang) * rOuter);
+      ctx.lineTo(Math.cos(ang - Math.PI / 8) * rInner, Math.sin(ang - Math.PI / 8) * rInner);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Cardinal Points Latin labels
+    ctx.fillStyle = '#3e2e1e';
+    ctx.font = 'bold 11px "Georgia", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('N', 0, -58);
+    ctx.fillText('S', 0, 58);
+    ctx.fillText('E', 58, 0);
+    ctx.fillText('O', -58, 0);
+
+    // Fleur-de-lis on North tip
+    ctx.fillStyle = '#b45309';
+    ctx.font = '14px serif';
+    ctx.fillText('⚜', 0, -42);
+
+    // Scale Bar underneath
+    ctx.translate(0, 80);
+    ctx.fillStyle = '#3e2e1e';
+    ctx.font = 'italic 9.5px "Georgia", serif';
+    ctx.fillText('ESCALA MILITAR • 500 PASOS', 0, -8);
+
+    // Alternating black and white scale ruler (120px wide)
+    const rulerW = 120;
+    const rulerH = 5;
+    const segs = 4;
+    const segW = rulerW / segs;
+    ctx.strokeStyle = '#3e2e1e';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-rulerW * 0.5, 0, rulerW, rulerH);
+
+    for (let s = 0; s < segs; s++) {
+      ctx.fillStyle = (s % 2 === 0) ? '#3e2e1e' : '#f4efe4';
+      ctx.fillRect(-rulerW * 0.5 + s * segW, 0, segW, rulerH);
+    }
+    ctx.restore();
+
+    // 10. Engraved Outer Border & Coordinate Tick Frame
+    ctx.save();
+    ctx.strokeStyle = '#4a3b2c';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(6, 6, this.width - 12, this.height - 12);
+
+    ctx.strokeStyle = '#8c7853';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(14, 14, this.width - 28, this.height - 28);
+    ctx.restore();
   }
 
   getTerrainAt(x, y) {
