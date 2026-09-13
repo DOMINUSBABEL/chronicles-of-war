@@ -35,6 +35,12 @@ class InputController {
     this.shiftDown = false;
     this.ctrlDown = false;
 
+    // Mobile / Tablet Touch state (Pinch zoom & pan)
+    this.lastTouchDist = 0;
+    this.lastTouchMidX = 0;
+    this.lastTouchMidY = 0;
+    this.isTouchInteracting = false;
+
     this._bindEvents();
   }
 
@@ -47,6 +53,11 @@ class InputController {
     window.addEventListener('mouseup', (e) => this._onMouseUp(e));
     this.canvas.addEventListener('wheel', (e) => this._onWheel(e), { passive: false });
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Mobile & Tablet Touch Listeners
+    this.canvas.addEventListener('touchstart', (e) => this._onTouchStart(e), { passive: false });
+    window.addEventListener('touchmove', (e) => this._onTouchMove(e), { passive: false });
+    window.addEventListener('touchend', (e) => this._onTouchEnd(e), { passive: false });
   }
 
   _updateMouseCoords(e) {
@@ -57,6 +68,82 @@ class InputController {
     const cam = this.engine.camera;
     this.mouseWorldX = (this.mouseScreenX - cam.x) / cam.zoom;
     this.mouseWorldY = (this.mouseScreenY - cam.y) / cam.zoom;
+  }
+
+  _onTouchStart(e) {
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      const fakeEvent = { clientX: t.clientX, clientY: t.clientY, button: 0, altKey: false };
+      this._onMouseDown(fakeEvent);
+    } else if (e.touches.length === 2) {
+      e.preventDefault();
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      this.lastTouchDist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+      this.lastTouchMidX = (t0.clientX + t1.clientX) * 0.5;
+      this.lastTouchMidY = (t0.clientY + t1.clientY) * 0.5;
+      this.isTouchInteracting = true;
+    }
+  }
+
+  _onTouchMove(e) {
+    if (e.touches.length === 1 && !this.isTouchInteracting) {
+      const t = e.touches[0];
+      const fakeEvent = { clientX: t.clientX, clientY: t.clientY, buttons: 1 };
+      this._onMouseMove(fakeEvent);
+    } else if (e.touches.length === 2) {
+      e.preventDefault();
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      const newDist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+      const newMidX = (t0.clientX + t1.clientX) * 0.5;
+      const newMidY = (t0.clientY + t1.clientY) * 0.5;
+
+      if (this.lastTouchDist > 0) {
+        const factor = newDist / this.lastTouchDist;
+        const rect = this.canvas.getBoundingClientRect();
+        const screenX = newMidX - rect.left;
+        const screenY = newMidY - rect.top;
+
+        if (this.engine.campaign && this.engine.campaign.activeMode === 'campaign') {
+          const cmap = this.engine.campaign.map;
+          const oldZoom = cmap.zoom;
+          cmap.isTransitioning = false;
+          cmap.zoom = Math.max(0.4, Math.min(4.5, cmap.zoom * factor));
+          cmap.camX = screenX - (screenX - cmap.camX) * (cmap.zoom / oldZoom) + (newMidX - this.lastTouchMidX);
+          cmap.camY = screenY - (screenY - cmap.camY) * (cmap.zoom / oldZoom) + (newMidY - this.lastTouchMidY);
+          cmap.targetZoom = cmap.zoom;
+          cmap.targetCamX = cmap.camX;
+          cmap.targetCamY = cmap.camY;
+        } else {
+          const cam = this.engine.camera;
+          const oldZoom = cam.zoom;
+          cam.zoom = Math.max(0.4, Math.min(2.5, cam.zoom * factor));
+          cam.x = screenX - (screenX - cam.x) * (cam.zoom / oldZoom) + (newMidX - this.lastTouchMidX);
+          cam.y = screenY - (screenY - cam.y) * (cam.zoom / oldZoom) + (newMidY - this.lastTouchMidY);
+        }
+      }
+      this.lastTouchDist = newDist;
+      this.lastTouchMidX = newMidX;
+      this.lastTouchMidY = newMidY;
+    }
+  }
+
+  _onTouchEnd(e) {
+    if (e.touches.length === 0) {
+      if (this.isTouchInteracting) {
+        this.isTouchInteracting = false;
+        this.lastTouchDist = 0;
+      } else {
+        const rect = this.canvas.getBoundingClientRect();
+        const fakeEvent = {
+          clientX: this.mouseScreenX + rect.left,
+          clientY: this.mouseScreenY + rect.top,
+          button: 0
+        };
+        this._onMouseUp(fakeEvent);
+      }
+    }
   }
 
   _onMouseDown(e) {
@@ -115,8 +202,12 @@ class InputController {
         const dy = e.clientY - this.panStartY;
         if (Math.hypot(dx, dy) > 2) {
           this.hasDraggedCampaign = true;
-          this.engine.campaign.map.camX += dx;
-          this.engine.campaign.map.camY += dy;
+          const cmap = this.engine.campaign.map;
+          cmap.isTransitioning = false;
+          cmap.camX += dx;
+          cmap.camY += dy;
+          cmap.targetCamX = cmap.camX;
+          cmap.targetCamY = cmap.camY;
           this.panStartX = e.clientX;
           this.panStartY = e.clientY;
         }
@@ -238,11 +329,15 @@ class InputController {
     if (this.engine.campaign && this.engine.campaign.activeMode === 'campaign') {
       const cmap = this.engine.campaign.map;
       const oldZoom = cmap.zoom;
-      cmap.zoom = Math.max(0.4, Math.min(2.5, cmap.zoom * zoomFactor));
+      cmap.isTransitioning = false;
+      cmap.zoom = Math.max(0.4, Math.min(4.5, cmap.zoom * zoomFactor));
       const mouseX = this.mouseScreenX;
       const mouseY = this.mouseScreenY;
       cmap.camX = mouseX - (mouseX - cmap.camX) * (cmap.zoom / oldZoom);
       cmap.camY = mouseY - (mouseY - cmap.camY) * (cmap.zoom / oldZoom);
+      cmap.targetZoom = cmap.zoom;
+      cmap.targetCamX = cmap.camX;
+      cmap.targetCamY = cmap.camY;
       return;
     }
 
