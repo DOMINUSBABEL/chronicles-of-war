@@ -156,6 +156,8 @@ class Unit {
     // Abilities & stances
     this.activeStance = null;
     this.pilumVolleysLeft = unitDef.maxVolleys || 0;
+    this.holdFire = false; // Rule of engagement: Hold fire to preserve ammo or ambush
+    this.skirmishStance = false; // Rule of engagement: Keep distance from approaching melee enemies
 
     // Create micro-soldiers
     this.soldiers = [];
@@ -378,10 +380,8 @@ class Unit {
       // When moving, target facing aligns with direction of travel
       this.targetAngle = moveAngle;
 
-      // Smooth angle interpolation toward target facing
-      let angleDiff = this.targetAngle - this.angle;
-      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      // Smooth angle interpolation toward target facing (Deterministic O(1) calculation)
+      const angleDiff = Math.atan2(Math.sin(this.targetAngle - this.angle), Math.cos(this.targetAngle - this.angle));
       this.angle += angleDiff * Math.min(1.0, 6.0 * dt);
     } else {
       if (this.waypoints.length > 0) {
@@ -404,25 +404,31 @@ class Unit {
       const meleeEngagementDist = this.radius + nearestEnemy.radius + 8;
       if (distToEnemy <= meleeEngagementDist) {
         this.inCombat = true;
-        let combatAngleDiff = enemyAngle - this.angle;
-        while (combatAngleDiff > Math.PI) combatAngleDiff -= Math.PI * 2;
-        while (combatAngleDiff < -Math.PI) combatAngleDiff += Math.PI * 2;
+        const combatAngleDiff = Math.atan2(Math.sin(enemyAngle - this.angle), Math.cos(enemyAngle - this.angle));
         this.angle += combatAngleDiff * Math.min(1.0, 8.0 * dt);
 
         this._resolveMeleeCombat(nearestEnemy, dt, particles, audio);
       }
       // Ranged Combat
       else if (this.range > 0 && distToEnemy <= this.range && !isMoving) {
-        let combatAngleDiff = enemyAngle - this.angle;
-        while (combatAngleDiff > Math.PI) combatAngleDiff -= Math.PI * 2;
-        while (combatAngleDiff < -Math.PI) combatAngleDiff += Math.PI * 2;
+        // Skirmish mode: if enemy is closing in (< 45% range), back away while firing
+        if (this.skirmishStance && distToEnemy < this.range * 0.45) {
+          const retreatAngle = Math.atan2(this.y - nearestEnemy.y, this.x - nearestEnemy.x);
+          this.targetX = this.x + Math.cos(retreatAngle) * 70;
+          this.targetY = this.y + Math.sin(retreatAngle) * 70;
+        }
+
+        const combatAngleDiff = Math.atan2(Math.sin(enemyAngle - this.angle), Math.cos(enemyAngle - this.angle));
         this.angle += combatAngleDiff * Math.min(1.0, 5.0 * dt);
 
-        const reloadFactor = this.fatigue >= 75 ? 1.5 : (this.fatigue >= 50 ? 1.2 : 1.0);
-        this.reloadTimer -= dt;
-        if (this.reloadTimer <= 0) {
-          this._fireRangedVolley(nearestEnemy, ballistics, particles, audio);
-          this.reloadTimer = (this.reloadTime * reloadFactor) + (Math.random() - 0.5) * 0.6;
+        // Fire only if hold fire is not active
+        if (!this.holdFire) {
+          const reloadFactor = this.fatigue >= 75 ? 1.5 : (this.fatigue >= 50 ? 1.2 : 1.0);
+          this.reloadTimer -= dt;
+          if (this.reloadTimer <= 0) {
+            this._fireRangedVolley(nearestEnemy, ballistics, particles, audio);
+            this.reloadTimer = (this.reloadTime * reloadFactor) + (Math.random() - 0.5) * 0.6;
+          }
         }
       }
     }
@@ -594,8 +600,7 @@ class Unit {
       const attackVecX = attacker.x - this.x;
       const attackVecY = attacker.y - this.y;
       const attackAngle = Math.atan2(attackVecY, attackVecX);
-      let angleDiff = Math.abs(this.angle - attackAngle);
-      while (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+      const angleDiff = Math.abs(Math.atan2(Math.sin(this.angle - attackAngle), Math.cos(this.angle - attackAngle)));
 
       if (angleDiff > 2.2) {
         // Rear Attack: +60% damage, +95% morale shock!

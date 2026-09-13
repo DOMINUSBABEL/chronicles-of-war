@@ -27,6 +27,19 @@ class SupplyTrain {
     this.suppliesRemaining = 4000; // Total ammo and medicine points
 
     this.isSupplyTrain = true;
+    this.def = {
+      name: 'Convoy de Bagajes y Tren de Pólvora',
+      category: 'logistics',
+      badge: '📦',
+      speed: 28,
+      desc: 'Columna móvil de intendencia. Provee radio logístico (320px) para munición y recuperación de fatiga.'
+    };
+    this.currentSoldiers = 12;
+    this.maxSoldiers = 12;
+    this.morale = 100;
+    this.maxMorale = 100;
+    this.currentFormation = 'convoy';
+
     this.teamColors = team === 0
       ? { main: '#1d4ed8', accent: '#fbbf24', flag: '#3b82f6', text: '#f8fafc' }
       : { main: '#b91c1c', accent: '#f59e0b', flag: '#ef4444', text: '#fef2f2' };
@@ -70,14 +83,30 @@ class SupplyTrain {
   render(ctx, isSelected) {
     if (!this.alive) return;
 
+    // Movement line to destination if selected
+    if ((isSelected || this.selected) && Math.hypot(this.targetX - this.x, this.targetY - this.y) > 8) {
+      ctx.save();
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.targetX, this.targetY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(this.targetX, this.targetY, 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
 
     // 1. Logistical Aura Ring
-    ctx.strokeStyle = this.team === 0 ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)';
-    ctx.fillStyle = this.team === 0 ? 'rgba(59, 130, 246, 0.03)' : 'rgba(239, 68, 68, 0.03)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = this.team === 0 ? 'rgba(59, 130, 246, 0.22)' : 'rgba(239, 68, 68, 0.22)';
+    ctx.fillStyle = this.team === 0 ? 'rgba(59, 130, 246, 0.04)' : 'rgba(239, 68, 68, 0.04)';
+    ctx.lineWidth = (isSelected || this.selected) ? 2.2 : 1.5;
     ctx.setLineDash([8, 6]);
     ctx.beginPath();
     ctx.arc(0, 0, this.supplyRadius, 0, Math.PI * 2);
@@ -88,19 +117,9 @@ class SupplyTrain {
     // 2. Draft Horses / Oxen (Ahead of the wagon)
     ctx.fillStyle = '#78350f'; // Brown horse
     ctx.beginPath();
-    ctx.ellipse(22, -6, 8, 3.5, 0, 0, Math.PI * 2); // Left draft horse
-    ctx.ellipse(22, 6, 8, 3.5, 0, 0, Math.PI * 2);  // Right draft horse
+    ctx.ellipse(15, -4, 6.5, 3.2, 0, 0, Math.PI * 2);
+    ctx.ellipse(15, 4, 6.5, 3.2, 0, 0, Math.PI * 2);
     ctx.fill();
-
-    // Harness poles
-    ctx.strokeStyle = '#92400e';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(10, -5);
-    ctx.lineTo(16, -5);
-    ctx.moveTo(10, 5);
-    ctx.lineTo(16, 5);
-    ctx.stroke();
 
     // 3. Heavy Timber Wagon Body
     ctx.fillStyle = '#451a03'; // Dark wood chassis
@@ -116,12 +135,25 @@ class SupplyTrain {
     // 5. White Canvas Canopy / Tarpaulin with Team Color Trim
     ctx.fillStyle = '#f1f5f9';
     ctx.beginPath();
-    ctx.roundRect(-14, -9, 24, 18, 4);
+    if (ctx.roundRect) {
+      ctx.roundRect(-14, -9, 24, 18, 4);
+    } else {
+      ctx.rect(-14, -9, 24, 18);
+    }
     ctx.fill();
 
     ctx.strokeStyle = this.teamColors.main;
     ctx.lineWidth = 2;
     ctx.stroke();
+
+    // Selection border around wagon
+    if (isSelected || this.selected) {
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2.0;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(-18, -15, 36, 30);
+      ctx.setLineDash([]);
+    }
 
     // Powder Keg & Ammunition Icon
     ctx.fillStyle = this.teamColors.accent;
