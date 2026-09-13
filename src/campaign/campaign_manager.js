@@ -23,11 +23,72 @@ class CampaignManager {
     this.globeView = null;
     this.is3DGlobe = false;
 
+    this.scenarioKey = 'europe_200';
     this.armies = [];
     this.selectedArmy = null;
     this.armyManager = this; // self reference for unit def lookups
 
     this._initStartingArmies();
+  }
+
+  startCampaign(scenarioKey = 'europe_200', factionKey = 'spain', customCivData = null) {
+    this.scenarioKey = scenarioKey;
+    this.playerFaction = factionKey;
+    this.turn = 1;
+
+    const scenarioDef = (typeof CAMPAIGN_SCENARIOS !== 'undefined') ? CAMPAIGN_SCENARIOS[scenarioKey] : null;
+    this.year = (scenarioDef && scenarioDef.startingYear) ? scenarioDef.startingYear : 1525;
+
+    // Load Scenario Provinces & Center Camera
+    this.map.loadScenario(scenarioKey, factionKey, customCivData);
+
+    // Initialize Tech Tree Era for all factions according to scenario
+    const startingEpoch = (scenarioDef && scenarioDef.startingEpoch) ? scenarioDef.startingEpoch : 'renaissance';
+    if (this.techTree && this.techTree.factionEpochs) {
+      const activeFactions = Object.keys((typeof FACTIONS !== 'undefined') ? FACTIONS : {});
+      activeFactions.forEach(f => {
+        this.techTree.factionEpochs[f] = startingEpoch;
+      });
+      if (factionKey === 'custom') {
+        this.techTree.factionEpochs['custom'] = startingEpoch;
+      }
+    }
+
+    // Initialize Armies based on scenario
+    if (typeof getScenarioStartingArmies === 'function') {
+      this.armies = getScenarioStartingArmies(scenarioKey, factionKey, customCivData);
+    } else {
+      this._initStartingArmies();
+    }
+
+    // Position armies on map
+    this.armies.forEach(a => {
+      const p = this.map.getProvinceById(a.provinceId);
+      if (p) a.initCoords(p);
+    });
+
+    // Assign victory goals
+    const dossiers = (typeof FACTION_HISTORICAL_DOSSIERS !== 'undefined') ? FACTION_HISTORICAL_DOSSIERS : {};
+    this.victoryObjectives = dossiers[factionKey] ? dossiers[factionKey].victoryGoals : {
+      military: 'Conquistar 35 provincias y 3 capitales enemigas.',
+      economic: 'Acumular 25,000 de Oro en el Tesoro Imperial.',
+      scientific: 'Investigar las tecnologías de la época más avanzada.'
+    };
+
+    // Update resources for player faction
+    const facDef = (factionKey === 'custom' && customCivData) ? customCivData : (FACTIONS[factionKey] || FACTIONS['spain']);
+    if (facDef && facDef.startingResources && this.economy && this.economy.treasuries) {
+      this.economy.treasuries[factionKey] = { ...facDef.startingResources };
+    }
+
+    // Update HUD & UI
+    this.refreshUI();
+
+    if (this.game) {
+      const sName = scenarioDef ? scenarioDef.name : 'Campaña';
+      const fName = facDef ? facDef.name : factionKey;
+      this.game.addLogMessage(`👑 ¡Campaña '${sName}' iniciada al mando de '${fName}' (${this.year})!`);
+    }
   }
 
   _initStartingArmies() {
@@ -512,8 +573,14 @@ class CampaignManager {
       turnEl.innerText = `Turno ${this.turn} • ${season} ${this.year}`;
     }
 
-    if (epochEl) {
+    if (epochEl && curEpoch) {
       epochEl.innerHTML = `${curEpoch.icon} ${curEpoch.name}`;
+    }
+
+    const modeBadge = document.getElementById('mode-indicator');
+    if (modeBadge && fac && this.activeMode === 'campaign') {
+      modeBadge.innerText = `${fac.banner || '🌍'} ${fac.name}`;
+      modeBadge.title = `Líder: ${fac.leader || ''} • Capital: ${fac.capitalProvince || ''}`;
     }
   }
 

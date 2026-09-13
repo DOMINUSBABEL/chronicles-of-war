@@ -50,13 +50,13 @@
 
         <!-- Antique Commission Placards (Menu Options) -->
         <div class="menu-buttons">
-          <button class="btn-menu btn-campaign-launch" onclick="launchCampaignFromMenu()">
+          <button class="btn-menu btn-campaign-launch" onclick="openCampaignSetupModal()">
             <div class="menu-seal seal-gold">
               <span class="seal-icon">🌍</span>
             </div>
             <div class="btn-menu-text">
               <span class="btn-menu-title">Gran Campaña 4X</span>
-              <span class="btn-menu-desc">550 provincias mundiales, diplomacia imperial, economía de 4 recursos y proyección en globo 3D.</span>
+              <span class="btn-menu-desc">Teatro Europeo (200 provs), Campaña Global (550), Guerra 30 Años o Génesis Sandbox.</span>
             </div>
             <span class="menu-btn-arrow">❯</span>
           </button>
@@ -791,6 +791,53 @@
     </div>
   </div>
 
+  <!-- MODAL: Cámara del Consejo de Estado (Master Campaign Setup) -->
+  <div id="campaign-setup-modal" class="modal-overlay" style="display: none;">
+    <div class="campaign-setup-window">
+      <div class="setup-header">
+        <div class="setup-header-title">
+          <span style="font-size: 1.5rem;">👑</span>
+          <div>
+            <h2>Cámara del Consejo de Estado</h2>
+            <span>Despacho Imperial • Elección de Escenario y Corona Soberana</span>
+          </div>
+        </div>
+        <button class="btn-setup-close" onclick="closeCampaignSetupModal()" title="Cerrar Despacho">✕</button>
+      </div>
+
+      <div class="setup-body">
+        <!-- Columna 1: Selección de Escenario -->
+        <div class="setup-col-scenarios">
+          <div class="setup-column-title">
+            <span>🗺️</span>
+            <span>Escenario de Campaña &amp; Teatro</span>
+          </div>
+          <div id="setup-scenarios-container" class="scenario-card-list"></div>
+        </div>
+
+        <!-- Columna 2: Facciones & Dossier del Soberano -->
+        <div class="setup-col-dossier">
+          <div class="setup-column-title">
+            <span>⚜️</span>
+            <span>Corona Soberana &amp; Dinastía</span>
+          </div>
+          <div id="setup-factions-grid" class="factions-grid"></div>
+          <div id="setup-sovereign-dossier" class="sovereign-dossier-card"></div>
+        </div>
+      </div>
+
+      <div class="setup-footer">
+        <button class="btn-setup-custom-civ" onclick="onOpenCustomCivFromSetup()">
+          👑 Forjar Civilización a Medida
+        </button>
+        <button class="btn-setup-launch-main" onclick="launchSelectedCampaign()">
+          <span>⚔️</span>
+          <span>Iniciar Campaña Soberana</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 3D Globe Projection Engine (Three.js Offline) -->
   <script src="lib/three.min.js"></script>
 
@@ -811,11 +858,12 @@
   <script src="src/campaign/world_map_data.js"></script>
   <script src="src/campaign/factions.js"></script>
   <script src="src/campaign/civ_builder.js"></script>
+  <script src="src/campaign/army_strategic.js"></script>
+  <script src="src/campaign/campaign_scenarios.js"></script>
   <script src="src/campaign/economy.js"></script>
   <script src="src/campaign/tech_tree.js"></script>
   <script src="src/map/procedural_battlefield.js"></script>
   <script src="src/campaign/campaign_map.js"></script>
-  <script src="src/campaign/army_strategic.js"></script>
   <script src="src/campaign/battle_bridge.js"></script>
   <script src="src/campaign/globe_view_3d.js"></script>
   <script src="src/campaign/campaign_manager.js"></script>
@@ -840,6 +888,46 @@
       }
 
       updateRecruitmentButtons(window.game.currentEraKey);
+
+      // URL parameter modal routing (for direct navigation & test verification)
+      const urlParams = new URLSearchParams(window.location.search);
+      const modalParam = urlParams.get('modal');
+      if (modalParam === 'setup') {
+        setTimeout(() => openCampaignSetupModal(), 150);
+      } else if (modalParam === 'custom_battle') {
+        setTimeout(() => openCustomBattleModal(), 150);
+      } else if (modalParam === 'civ_builder') {
+        setTimeout(() => openCivBuilderModal(), 150);
+      } else if (modalParam === 'scenarios') {
+        setTimeout(() => openHistoricalScenariosModal(), 150);
+      } else if (modalParam === 'codex') {
+        setTimeout(() => window.codexBellum && window.codexBellum.open(), 150);
+      }
+
+      const battleParam = urlParams.get('battle');
+      if (battleParam) {
+        setTimeout(() => {
+          const menuEl = document.getElementById('main-menu-screen');
+          if (menuEl) menuEl.style.display = 'none';
+          if (window.menuAmbience) window.menuAmbience.stop();
+          launchHistoricalScenario(battleParam);
+          if (window.game && window.game.units) {
+            const playerUnit = window.game.units.find(u => u.team === 0 && u.range > 0);
+            if (playerUnit) {
+              playerUnit.selected = true;
+              window.game.selectedUnits = [playerUnit];
+              window.game._updateSelectionUI();
+            }
+          }
+        }, 400);
+      }
+
+      const campaignParam = urlParams.get('campaign');
+      if (campaignParam === 'start') {
+        setTimeout(() => {
+          launchSelectedCampaign();
+        }, 300);
+      }
     });
 
     function switchGameMode(mode) {
@@ -1188,10 +1276,149 @@
       builder.applyCustomCiv();
       closeCivBuilderModal();
       window.game.sound.playTrumpetCall();
+
+      if (isConfiguringCustomCivFromSetup) {
+        isConfiguringCustomCivFromSetup = false;
+        selectedCampaignFaction = 'custom';
+        openCampaignSetupModal();
+      }
     }
 
-    // --- MAIN MENU HANDLERS ---
-    function launchCampaignFromMenu() {
+    // --- CAMPAIGN SETUP MODAL (Cámara del Consejo de Estado) ---
+    let selectedCampaignScenario = 'global_550';
+    let selectedCampaignFaction = 'spain';
+    let isConfiguringCustomCivFromSetup = false;
+
+    function openCampaignSetupModal() {
+      const modal = document.getElementById('campaign-setup-modal');
+      if (!modal) return;
+      updateCampaignSetupUI();
+      modal.style.display = 'flex';
+    }
+
+    function closeCampaignSetupModal() {
+      const modal = document.getElementById('campaign-setup-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function selectCampaignScenario(scenarioKey) {
+      if (!window.CAMPAIGN_SCENARIOS || !window.CAMPAIGN_SCENARIOS[scenarioKey]) return;
+      selectedCampaignScenario = scenarioKey;
+      const scen = window.CAMPAIGN_SCENARIOS[scenarioKey];
+      if (scen.recommendedFactions && !scen.recommendedFactions.includes(selectedCampaignFaction) && selectedCampaignFaction !== 'custom') {
+        selectedCampaignFaction = scen.recommendedFactions[0] || 'spain';
+      }
+      updateCampaignSetupUI();
+    }
+
+    function selectCampaignFaction(factionKey) {
+      selectedCampaignFaction = factionKey;
+      updateCampaignSetupUI();
+    }
+
+    function updateCampaignSetupUI() {
+      if (!window.CAMPAIGN_SCENARIOS) return;
+
+      // 1. Render Scenarios List
+      const scenContainer = document.getElementById('setup-scenarios-container');
+      if (scenContainer) {
+        scenContainer.innerHTML = Object.keys(window.CAMPAIGN_SCENARIOS).map(sKey => {
+          const s = window.CAMPAIGN_SCENARIOS[sKey];
+          const isAct = sKey === selectedCampaignScenario;
+          return `
+            <div class="scenario-card ${isAct ? 'active' : ''}" onclick="selectCampaignScenario('${sKey}')">
+              <div class="scenario-card-top">
+                <span class="scenario-card-title">${s.icon} ${s.name}</span>
+                <span class="scenario-badge">${s.startingYear} • ${s.difficulty} ${isAct ? '• ✓' : ''}</span>
+              </div>
+              <p class="scenario-card-desc">${s.desc}</p>
+              <div class="scenario-meta-row">
+                <span>🗺️ ${s.provinceCountEstimate} Provincias</span>
+                <span>🏛️ Época: ${s.startingEpoch === 'modern' ? 'Ilustración' : (s.startingEpoch === 'antiquity' ? 'Antigüedad' : 'Renacimiento')}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 2. Render Factions Grid
+      const currentScen = window.CAMPAIGN_SCENARIOS[selectedCampaignScenario] || window.CAMPAIGN_SCENARIOS.global_550;
+      const facList = (currentScen && currentScen.recommendedFactions) ? currentScen.recommendedFactions : Object.keys(window.FACTIONS || {});
+      const facGrid = document.getElementById('setup-factions-grid');
+      if (facGrid) {
+        facGrid.innerHTML = facList.map(fKey => {
+          const fBase = (window.FACTIONS && window.FACTIONS[fKey]) || {};
+          const fDoss = (window.FACTION_HISTORICAL_DOSSIERS && window.FACTION_HISTORICAL_DOSSIERS[fKey]) || {};
+          const banner = fBase.banner || fDoss.emblem || '🚩';
+          const name = fBase.adjective || fBase.name || fKey;
+          const isAct = fKey === selectedCampaignFaction;
+          return `
+            <button class="btn-faction-pill ${isAct ? 'active' : ''}" onclick="selectCampaignFaction('${fKey}')" title="${fBase.name || fKey}">
+              <span class="f-banner">${banner}</span>
+              <span class="f-name">${name}</span>
+            </button>
+          `;
+        }).join('');
+      }
+
+      // 3. Render Sovereign Dossier
+      const dossierCard = document.getElementById('setup-sovereign-dossier');
+      if (dossierCard) {
+        const fKey = selectedCampaignFaction;
+        const fBase = (window.FACTIONS && window.FACTIONS[fKey]) || {};
+        const fDoss = (window.FACTION_HISTORICAL_DOSSIERS && window.FACTION_HISTORICAL_DOSSIERS[fKey]) ||
+                      (window.FACTION_HISTORICAL_DOSSIERS && window.FACTION_HISTORICAL_DOSSIERS['spain']) || {};
+
+        const leader = fDoss.leader || fBase.leader || 'Soberano';
+        const title = fDoss.title || 'Corona Soberana';
+        const quote = fDoss.quote || '«El destino de nuestra corona se forja en el campo de batalla.»';
+        const briefing = fDoss.historicalBriefing || (fBase.traits ? fBase.traits.map(t => t.desc).join(' ') : '');
+        const doctrines = fDoss.doctrinesText || (fBase.traits ? fBase.traits.map(t => `${t.name}: ${t.desc}`).join(' | ') : '');
+        const vGoals = fDoss.victoryGoals || {
+          military: 'Dominar al menos 35 provincias y asegurar las fronteras imperiales.',
+          economic: 'Acumular 25,000 Oro en las arcas del Tesoro.',
+          scientific: 'Avanzar a la Época de la Ilustración y fundar la Academia Imperial.'
+        };
+
+        dossierCard.innerHTML = `
+          <div class="dossier-top">
+            <div class="dossier-crest">${fBase.banner || '👑'}</div>
+            <div class="dossier-leader-info">
+              <h3>${leader}</h3>
+              <span>${title}</span>
+            </div>
+          </div>
+          <div class="dossier-quote">${quote}</div>
+          <div class="dossier-briefing">${briefing}</div>
+          <div class="dossier-section-title">DOCTRINAS &amp; BENEFICIOS DINÁSTICOS</div>
+          <div class="dossier-traits-text">${doctrines}</div>
+          <div class="dossier-section-title">CONDICIONES DE VICTORIA (CAMPAÑA)</div>
+          <div class="dossier-victory-goals">
+            <div class="victory-goal-item">
+              <strong>⚔️ Victoria Militar:</strong>
+              <span>${vGoals.military}</span>
+            </div>
+            <div class="victory-goal-item">
+              <strong>🪙 Victoria Económica:</strong>
+              <span>${vGoals.economic}</span>
+            </div>
+            <div class="victory-goal-item">
+              <strong>🔬 Victoria Ilustrada:</strong>
+              <span>${vGoals.scientific}</span>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function onOpenCustomCivFromSetup() {
+      isConfiguringCustomCivFromSetup = true;
+      closeCampaignSetupModal();
+      openCivBuilderModal();
+    }
+
+    function launchSelectedCampaign() {
+      closeCampaignSetupModal();
       const menuEl = document.getElementById('main-menu-screen');
       if (menuEl) menuEl.style.display = 'none';
       if (window.menuAmbience) window.menuAmbience.stop();
@@ -1199,8 +1426,20 @@
 
       window.game.gameState = 'game';
       switchGameMode('campaign');
+
+      if (window.game.campaign && window.game.campaign.startCampaign) {
+        window.game.campaign.startCampaign(selectedCampaignScenario, selectedCampaignFaction);
+      } else {
+        window.game.campaign.playerFaction = selectedCampaignFaction;
+        window.game.campaign.refreshUI();
+      }
+
       window.game.sound.playTrumpetCall();
-      window.game.addLogMessage('🌍 ¡Gran Campaña iniciada! Comanda a tus ejércitos y expande tu imperio.');
+    }
+
+    // --- MAIN MENU HANDLERS ---
+    function launchCampaignFromMenu() {
+      openCampaignSetupModal();
     }
 
     function returnToMainMenu() {

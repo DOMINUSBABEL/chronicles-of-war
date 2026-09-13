@@ -803,6 +803,11 @@ class Unit {
       return;
     }
 
+    // 0. Render Tactical Firing Range if Selected & Ranged
+    if (this.selected && this.range > 0 && !this.isRouting) {
+      this._renderFiringRange(ctx);
+    }
+
     // 1. Render Micro-Soldiers
     for (let i = 0; i < this.soldiers.length; i++) {
       const s = this.soldiers[i];
@@ -816,6 +821,52 @@ class Unit {
     // 3. Render Health & Morale Gauges with Smart LOD (anti-clutter)
     const isDetailed = Boolean(this.selected || this.isHovered);
     this._renderHealthAndMorale(ctx, isDetailed);
+
+    ctx.restore();
+  }
+
+  _renderFiringRange(ctx) {
+    ctx.save();
+    ctx.translate(this.x + this.shakeX, this.y + this.shakeY);
+
+    const r = this.range;
+    const isHolding = this.holdFire || !this.fireAtWill;
+    const strokeColor = isHolding ? 'rgba(239, 68, 68, 0.75)' : (this.team === 0 ? 'rgba(56, 189, 248, 0.7)' : 'rgba(248, 113, 113, 0.7)');
+    const fillColor = isHolding ? 'rgba(239, 68, 68, 0.04)' : (this.team === 0 ? 'rgba(56, 189, 248, 0.05)' : 'rgba(248, 113, 113, 0.05)');
+
+    // Range wash area
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+
+    // Dashed boundary ring
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([6, 4]);
+    ctx.stroke();
+
+    // If artillery has minimum range (e.g. 35px)
+    if (this.def.category === 'artillery') {
+      const minR = 35;
+      ctx.beginPath();
+      ctx.arc(0, 0, minR, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+    }
+
+    // Range Label at 12 o'clock
+    ctx.setLineDash([]);
+    ctx.fillStyle = strokeColor;
+    ctx.font = '600 9px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    const rangeText = isHolding ? `🚫 ALTO AL FUEGO (${Math.round(r)}m)` : `🎯 RANGO: ${Math.round(r)}m`;
+    ctx.fillText(rangeText, 0, -r - 3);
 
     ctx.restore();
   }

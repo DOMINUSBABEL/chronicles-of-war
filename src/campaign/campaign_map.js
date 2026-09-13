@@ -210,6 +210,33 @@ class StrategicCampaignMap {
     }
   }
 
+  loadScenario(scenarioKey = 'europe_200', playerFaction = 'spain', customCivData = null) {
+    this.scenarioKey = scenarioKey;
+    const rawProvs = (typeof getScenarioProvinces === 'function')
+      ? getScenarioProvinces(scenarioKey, customCivData)
+      : (typeof WORLD_PROVINCES !== 'undefined' ? WORLD_PROVINCES : []);
+
+    this.provinces = rawProvs.map(d => new Province(d));
+    this.selectedProvince = null;
+    this.hoveredProvince = null;
+    this.activeLabelBoxes = [];
+
+    // Center camera on player faction's capital or scenario center
+    const activeFactionsMap = (typeof FACTIONS !== 'undefined') ? FACTIONS : {};
+    const fDef = (playerFaction === 'custom' && customCivData) ? customCivData : (activeFactionsMap[playerFaction] || activeFactionsMap['spain']);
+    const capId = fDef ? fDef.capitalProvince : 'castilla';
+    const capProv = this.getProvinceById(capId);
+
+    const scenarioDef = (typeof CAMPAIGN_SCENARIOS !== 'undefined') ? CAMPAIGN_SCENARIOS[scenarioKey] : null;
+
+    if (capProv) {
+      const zoom = (scenarioDef && scenarioDef.cameraCenter) ? scenarioDef.cameraCenter.zoom : 1.8;
+      this.flyTo(capProv.x, capProv.y, zoom);
+    } else if (scenarioDef && scenarioDef.cameraCenter) {
+      this.flyTo(scenarioDef.cameraCenter.x, scenarioDef.cameraCenter.y, scenarioDef.cameraCenter.zoom);
+    }
+  }
+
   _updateCamera() {
     if (this.isTransitioning) {
       const lerp = 0.12;
