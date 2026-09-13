@@ -255,31 +255,28 @@ class StrategicCapturePoint {
   render(ctx) {
     ctx.save();
 
-    // Base Zone Circle with pulsing outline
-    const pulseR = this.radius + Math.sin(this.animPulse) * 3;
-    let zoneColor = 'rgba(148, 163, 184, 0.12)';
-    let strokeColor = 'rgba(148, 163, 184, 0.4)';
+    // Subtle cartographic compass perimeter ring
+    const pulseR = this.radius + Math.sin(this.animPulse) * 2;
+    let strokeColor = 'rgba(212, 175, 55, 0.35)';
 
     if (this.controllingTeam === 0) {
-      zoneColor = 'rgba(59, 130, 246, 0.15)';
-      strokeColor = '#3b82f6';
+      strokeColor = 'rgba(59, 130, 246, 0.65)';
     } else if (this.controllingTeam === 1) {
-      zoneColor = 'rgba(239, 68, 68, 0.15)';
-      strokeColor = '#ef4444';
+      strokeColor = 'rgba(239, 68, 68, 0.65)';
     }
 
-    ctx.fillStyle = zoneColor;
     ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2.0;
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([4, 4]);
     ctx.beginPath();
     ctx.arc(this.x, this.y, pulseR, 0, Math.PI * 2);
-    ctx.fill();
     ctx.stroke();
+    ctx.setLineDash([]);
 
-    // Central Flagstaff & Plaque
-    ctx.fillStyle = '#0f172a';
+    // Central Burnished Brass Astrolabe Medallion
+    ctx.fillStyle = 'rgba(20, 13, 8, 0.94)';
     ctx.strokeStyle = '#d4af37';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.arc(this.x, this.y, 14, 0, Math.PI * 2);
     ctx.fill();
@@ -288,13 +285,13 @@ class StrategicCapturePoint {
     // Capture Progress Ring
     const progressAngle = (Math.abs(this.captureProgress) / 100) * Math.PI * 2;
     ctx.strokeStyle = this.captureProgress >= 0 ? '#3b82f6' : '#ef4444';
-    ctx.lineWidth = 3.0;
+    ctx.lineWidth = 2.4;
     ctx.beginPath();
     ctx.arc(this.x, this.y, 17, -Math.PI * 0.5, -Math.PI * 0.5 + progressAngle);
     ctx.stroke();
 
-    // Icon / Emblem
-    ctx.font = '13px sans-serif';
+    // Objective Heraldic Icon
+    ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     let icon = '🚩';
@@ -304,17 +301,20 @@ class StrategicCapturePoint {
     else if (this.type === 'camp') icon = '🏕️';
     ctx.fillText(icon, this.x, this.y);
 
-    // Objective Label Plaque
-    const labelW = Math.max(70, this.name.length * 6.5);
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 1;
-    ctx.fillRect(this.x - labelW * 0.5, this.y - 28, labelW, 14);
-    ctx.strokeRect(this.x - labelW * 0.5, this.y - 28, labelW, 14);
+    // Objective Cartouche Plaque
+    ctx.font = 'bold 8.5px "Cinzel", Georgia, serif';
+    const labelW = Math.max(76, ctx.measureText(this.name).width + 16);
 
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 9px "Outfit", sans-serif';
-    ctx.fillText(this.name, this.x, this.y - 20);
+    ctx.fillStyle = 'rgba(20, 13, 8, 0.94)';
+    ctx.strokeStyle = '#c89b3c';
+    ctx.lineWidth = 1;
+    ctx.fillRect(this.x - labelW * 0.5, this.y - 30, labelW, 15);
+    ctx.strokeRect(this.x - labelW * 0.5, this.y - 30, labelW, 15);
+
+    ctx.fillStyle = '#fef08a';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.name, this.x, this.y - 22);
 
     ctx.restore();
   }
@@ -592,21 +592,21 @@ class SupplySystem {
       const state = this.unitSupplyStates.get(u.id);
       const isSupplied = state ? state.isSupplied : false;
 
-      // Draw dashed supply line only if unit is selected or close to being isolated
-      if (u.selected || (state && state.isolatedTimer > 2.0)) {
+      // Draw subtle logistical line only when supply train or unit is explicitly selected
+      if (friendlyTrain.selected || (u.selected && isSupplied)) {
         ctx.beginPath();
         ctx.moveTo(friendlyTrain.x, friendlyTrain.y);
         ctx.lineTo(u.x, u.y);
 
         if (isSupplied) {
-          ctx.strokeStyle = u.team === 0 ? 'rgba(52, 211, 153, 0.45)' : 'rgba(248, 113, 113, 0.35)';
-          ctx.lineWidth = 1.5;
-          ctx.setLineDash([6, 6]);
+          ctx.strokeStyle = u.team === 0 ? 'rgba(59, 130, 246, 0.45)' : 'rgba(239, 68, 68, 0.35)';
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([5, 5]);
         } else {
-          // Severed line in bright pulsing red
-          ctx.strokeStyle = 'rgba(239, 68, 68, 0.85)';
-          ctx.lineWidth = 2.2;
-          ctx.setLineDash([4, 4]);
+          // Faded amber chalk line when disconnected
+          ctx.strokeStyle = 'rgba(217, 119, 6, 0.4)';
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([3, 4]);
         }
         ctx.stroke();
       }

@@ -124,14 +124,14 @@ class TerritorySystem {
 
   renderFrontline(ctx) {
     ctx.save();
-    // Render soft territorial shading & frontlines
+    // Render very soft painterly watercolor influence (never blocking terrain)
     for (let r = 0; r < this.rows; r++) {
       for (let c = 0; c < this.cols; c++) {
         const inf = this.influence[r * this.cols + c];
-        if (Math.abs(inf) > 0.18) {
+        if (Math.abs(inf) > 0.25) {
           ctx.fillStyle = inf > 0
-            ? `rgba(37, 99, 235, ${Math.min(0.16, inf * 0.16)})`
-            : `rgba(220, 38, 38, ${Math.min(0.16, -inf * 0.16)})`;
+            ? `rgba(30, 64, 175, ${Math.min(0.045, inf * 0.045)})`
+            : `rgba(185, 28, 28, ${Math.min(0.045, -inf * 0.045)})`;
           ctx.fillRect(c * this.gridSize, r * this.gridSize, this.gridSize, this.gridSize);
         }
       }
