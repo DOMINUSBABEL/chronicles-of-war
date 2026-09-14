@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Chronicles of War: Empires of Steel & Powder</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -223,6 +223,7 @@
       <button class="btn-camp-action" onclick="openP2PModal()" title="Duelo Multijugador P2P WebRTC"><span class="btn-icon">🌐</span><span class="btn-action-text"> P2P</span></button>
       <button class="btn-camp-action btn-scale-ui" onclick="openUIScaleModal()" title="Ajustar Escala Visual para tu Pantalla"><span class="btn-icon">⚙️</span><span class="btn-action-text"> Escala</span></button>
       <button id="btn-audio" class="btn-camp-action" onclick="toggleSoundUI()" title="Sonido & Música"><span class="btn-icon">🔊</span></button>
+      <button id="btn-mobile-actions" class="btn-camp-action btn-mobile-only" onclick="openMobileActionsModal()" title="Menú de Mando y Cancillerías"><span class="btn-icon">📜</span><span class="btn-action-text"> Menú</span></button>
     </div>
   </header>
 
@@ -892,6 +893,42 @@
     </div>
   </div>
 
+  <!-- MODAL: Mobile Commander's Menu & Chancelleries (Menú de Mando para Dispositivos Móviles) -->
+  <div id="mobile-actions-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-window glass-panel" style="max-width: 360px; width: 92vw; padding: 18px; border: 2px solid #d4af37; border-radius: 8px;">
+      <div class="modal-head">
+        <h2>⚜️ MENÚ DE MANDO IMPERIAL</h2>
+        <button class="btn-close" onclick="closeMobileActionsModal()">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
+        <button class="btn-action" onclick="returnToMainMenu(); closeMobileActionsModal();" style="padding: 10px 14px; font-size: 0.88rem; justify-content: flex-start; gap: 8px;">
+          🏛️ Volver al Cuartel General
+        </button>
+        <button class="btn-action" onclick="openDiplomacyModal(); closeMobileActionsModal();" style="padding: 10px 14px; font-size: 0.88rem; justify-content: flex-start; gap: 8px;">
+          🤝 Cancillería Diplomática
+        </button>
+        <button class="btn-action" onclick="openCivBuilderModal(); closeMobileActionsModal();" style="padding: 10px 14px; font-size: 0.88rem; justify-content: flex-start; gap: 8px;">
+          👑 Forjador de Civilizaciones
+        </button>
+        <button class="btn-action" onclick="window.codexBellum.open(); closeMobileActionsModal();" style="padding: 10px 14px; font-size: 0.88rem; justify-content: flex-start; gap: 8px;">
+          📖 Tratados &amp; Codex Bellum
+        </button>
+        <button class="btn-action" onclick="openP2PModal(); closeMobileActionsModal();" style="padding: 10px 14px; font-size: 0.88rem; justify-content: flex-start; gap: 8px;">
+          🌐 Duelo Multijugador P2P WebRTC
+        </button>
+        <button class="btn-action" onclick="openUIScaleModal(); closeMobileActionsModal();" style="padding: 10px 14px; font-size: 0.88rem; justify-content: flex-start; gap: 8px;">
+          ⚙️ Ajuste de Escala Visual
+        </button>
+        <button class="btn-action" onclick="toggleSoundUI(); closeMobileActionsModal();" style="padding: 10px 14px; font-size: 0.88rem; justify-content: flex-start; gap: 8px;">
+          🔊 Sonido &amp; Música
+        </button>
+        <button class="btn-action" onclick="toggleMobileCronica(); closeMobileActionsModal();" style="padding: 10px 14px; font-size: 0.88rem; justify-content: flex-start; gap: 8px;">
+          📜 Alternar Crónica de Batalla
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 3D Globe Projection Engine (Three.js Offline) -->
   <script src="lib/three.min.js"></script>
 
@@ -1050,6 +1087,23 @@
         localStorage.setItem('chronicles_ui_scale', scaleVal);
       }
       closeUIScaleModal();
+    }
+
+    function openMobileActionsModal() {
+      const modal = document.getElementById('mobile-actions-modal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeMobileActionsModal() {
+      const modal = document.getElementById('mobile-actions-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function toggleMobileCronica() {
+      const dock = document.querySelector('.right-dock');
+      if (dock) {
+        dock.classList.toggle('mobile-open');
+      }
     }
 
     function setMapModeUI(mode) {

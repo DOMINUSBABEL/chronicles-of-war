@@ -848,6 +848,11 @@ class StrategicCampaignMap {
   _renderMapDecoration(ctx) {
     // Screen-space Compass Rose
     ctx.save();
+    const crW = ctx.canvas ? ctx.canvas.width : (this.canvas ? this.canvas.width : 1200);
+    if (crW <= 768) {
+      ctx.restore();
+      return; // Skip compass on mobile to avoid overlapping theaters bar
+    }
     const crH = ctx.canvas ? ctx.canvas.height : (this.canvas ? this.canvas.height : 900);
     const crX = 65;
     const crY = crH - 65;
