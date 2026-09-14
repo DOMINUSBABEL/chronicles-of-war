@@ -1,48 +1,54 @@
 import http.server
 import socketserver
-import os
 import sys
-import webbrowser
+import os
+import mimetypes
 
-PORT = 8085
-DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
 
-class CustomHandler(http.server.SimpleHTTPRequestHandler):
+# Ensure MIME types are registered properly
+mimetypes.add_type('application/javascript', '.js')
+mimetypes.add_type('application/json', '.json')
+mimetypes.add_type('text/css', '.css')
+mimetypes.add_type('image/svg+xml', '.svg')
+mimetypes.add_type('audio/ogg', '.ogg')
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+class ChroniclesHTTPHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=DIRECTORY, **kwargs)
+        super().__init__(*args, directory=CURRENT_DIR, **kwargs)
 
     def end_headers(self):
-        # Prevent caching for live development
         self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
         self.send_header('Pragma', 'no-cache')
         self.send_header('Expires', '0')
         self.send_header('Access-Control-Allow-Origin', '*')
         super().end_headers()
 
-    def guess_type(self, path):
-        mimetype, _ = super().guess_type(path), None
-        if path.endswith('.js'):
-            return 'application/javascript'
-        if path.endswith('.css'):
-            return 'text/css'
-        if path.endswith('.html'):
-            return 'text/html'
-        if path.endswith('.ogg'):
-            return 'audio/ogg'
-        return mimetype
+    def log_message(self, format, *args):
+        sys.stderr.write(f"[ChroniclesServer] {self.address_string()} - {format % args}\n")
 
-def run():
-    sys.stdout.reconfigure(encoding='utf-8')
-    os.chdir(DIRECTORY)
-    server_address = ('127.0.0.1', PORT)
-    httpd = http.server.ThreadingHTTPServer(server_address, CustomHandler)
-    print(f"🚀 Chronicles of War Server running at http://127.0.0.1:{PORT}/")
-    print(f"📁 Serving directory: {DIRECTORY}")
+def run(port=8085):
+    os.chdir(CURRENT_DIR)
     try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print("\n🛑 Servidor detenido.")
-        httpd.server_close()
+        with http.server.ThreadingHTTPServer(("", port), ChroniclesHTTPHandler) as httpd:
+            print(f"============================================================")
+            print(f" CHRONICLES OF WAR: EMPIRES OF STEEL & POWDER")
+            print(f" Servidor Táctico Multi-hilo Activo en:")
+            print(f" 👉 http://0.0.0.0:{port}/index.html")
+            print(f" Directorio de servicio: {CURRENT_DIR}")
+            print(f"============================================================")
+            sys.stdout.flush()
+            httpd.serve_forever()
+    except OSError as e:
+        if e.errno == 10048 or "Address already in use" in str(e):
+            print(f"[Aviso] Puerto {port} ocupado. Reintentando en puerto {port + 1}...")
+            run(port + 1)
+        else:
+            raise e
 
 if __name__ == '__main__':
-    run()
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8085
+    run(port)
